@@ -1,0 +1,349 @@
+/* ===== HOME PAGE ===== */
+.home-page {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.home-ambient {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 30% 50%, rgba(93, 64, 55, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 40%, rgba(201, 169, 110, 0.05) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.home-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 50px;
+  padding: 40px 20px;
+  position: relative;
+  z-index: 1;
+}
+
+@media (min-width: 800px) {
+  .home-content {
+    flex-direction: row;
+    gap: 80px;
+    padding: 40px 60px;
+  }
+}
+
+/* ===== THE DOOR ===== */
+.door-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: fadeIn 0.6s ease-out both;
+}
+
+.door-wrapper.door-opening .door {
+  transform: rotateY(-95deg);
+  box-shadow: inset 0 0 40px rgba(0,0,0,0.8);
+}
+
+.door-wrapper.door-opening .door-floor-shadow {
+  transform: scaleX(0.2) translateX(-40%);
+  opacity: 0.3;
+}
+
+.door-frame {
+  background: var(--color-wood-dark);
+  padding: 12px;
+  border-radius: 6px 6px 0 0;
+  box-shadow: var(--shadow-xl);
+  position: relative;
+  perspective: 1200px;
+}
+
+/* Frame edge bevel */
+.door-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    inset 2px 2px 4px rgba(255,255,255,0.05),
+    inset -2px -2px 4px rgba(0,0,0,0.3);
+  pointer-events: none;
+}
+
+.door {
+  width: 260px;
+  height: 440px;
+  border-radius: 4px 4px 0 0;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 16px;
+  position: relative;
+  gap: 14px;
+  box-shadow: inset 0 0 40px rgba(0,0,0,0.4);
+  transform-origin: left;
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.8s ease;
+  transform-style: preserve-3d;
+}
+
+@media (min-width: 480px) {
+  .door {
+    width: 300px;
+    height: 500px;
+    padding: 22px 20px;
+    gap: 18px;
+  }
+}
+
+.door-panel {
+  border: 2px solid rgba(255,255,255,0.06);
+  box-shadow:
+    inset 0 2px 8px rgba(0,0,0,0.4),
+    0 1px 0 rgba(255,255,255,0.05);
+  border-radius: 3px;
+}
+
+.door-panel-top {
+  flex: 0.55;
+}
+
+.door-panel-bottom {
+  flex: 0.35;
+  position: relative;
+}
+
+.door-panel-inset {
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 2px;
+  box-shadow: inset 0 1px 4px rgba(0,0,0,0.3);
+}
+
+.door-glass {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.15);
+  border-radius: inherit;
+}
+
+.brand-lockup {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.brand-ornament {
+  color: var(--color-gold);
+  font-size: 0.7rem;
+  letter-spacing: 6px;
+  opacity: 0.7;
+}
+
+.brand-name {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  font-weight: 700;
+  color: #ece2ce;
+  text-shadow:
+    0 1px 2px rgba(0,0,0,0.8),
+    0 0 20px rgba(201, 169, 110, 0.15);
+  line-height: 1.1;
+  letter-spacing: 1px;
+}
+
+@media (min-width: 480px) {
+  .brand-name {
+    font-size: 2.4rem;
+  }
+}
+
+.brand-ampersand {
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.8em;
+  color: var(--color-gold);
+  display: block;
+  margin: -2px 0;
+}
+
+.brand-tagline {
+  font-family: var(--font-sans);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: #b8a88a;
+  margin-top: 6px;
+}
+
+/* Door handle hardware */
+.door-handle-area {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.door-handle {
+  width: 10px;
+  height: 36px;
+  background: linear-gradient(180deg, #d4af37 0%, #b8860b 40%, #d4af37 60%, #996515 100%);
+  border-radius: 3px;
+  box-shadow:
+    2px 2px 6px rgba(0,0,0,0.5),
+    inset 1px 1px 2px rgba(255,255,255,0.3);
+}
+
+.door-keyhole {
+  width: 8px;
+  height: 14px;
+  background: #1a1108;
+  border-radius: 50% 50% 2px 2px;
+  border: 1px solid #b8860b;
+  box-shadow: inset 0 0 3px rgba(0,0,0,0.8);
+}
+
+/* Door hinges */
+.door-hinge {
+  position: absolute;
+  left: -2px;
+  width: 8px;
+  height: 30px;
+  background: linear-gradient(90deg, #8b7355, #a0896c, #8b7355);
+  border-radius: 1px;
+  box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+}
+.door-hinge-top { top: 60px; }
+.door-hinge-bottom { bottom: 60px; }
+
+.door-floor-shadow {
+  width: 90%;
+  height: 8px;
+  background: radial-gradient(ellipse, rgba(0,0,0,0.15) 0%, transparent 70%);
+  margin-top: 2px;
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+/* ===== THE CHALKBOARD ===== */
+.chalkboard-wrapper {
+  animation: fadeIn 0.6s ease-out 0.2s both;
+  transform: rotate(1.5deg);
+}
+
+@media (min-width: 800px) {
+  .chalkboard-wrapper {
+    transform: rotate(2deg);
+  }
+}
+
+.chalkboard {
+  width: 280px;
+  padding: 30px 24px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-xl);
+}
+
+@media (min-width: 480px) {
+  .chalkboard {
+    width: 300px;
+    padding: 36px 28px;
+  }
+}
+
+.chalk-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.chalk-flourish {
+  color: rgba(255,255,255,0.3);
+  font-size: 1.4rem;
+}
+
+.chalk-title {
+  font-family: var(--font-serif);
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--color-chalk);
+  letter-spacing: 2px;
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.chalk-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.chalk-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 12px;
+  color: var(--color-chalk);
+  font-family: var(--font-serif);
+  font-size: 1.2rem;
+  font-weight: 400;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  border-radius: var(--radius-sm);
+  position: relative;
+}
+
+.chalk-btn:hover {
+  background: rgba(255,255,255,0.06);
+  transform: translateX(4px);
+}
+
+.chalk-btn-text {
+  flex: 1;
+}
+
+.chalk-arrow {
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: all 0.25s ease;
+  font-size: 1rem;
+  color: var(--color-gold);
+}
+
+.chalk-btn:hover .chalk-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.chalk-separator {
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  margin: 0 12px;
+}
+
+.chalk-footer {
+  margin-top: 28px;
+  text-align: center;
+}
+
+.chalk-note {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 0.5px;
+}
