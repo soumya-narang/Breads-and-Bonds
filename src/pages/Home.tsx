@@ -286,14 +286,6 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, session }) => {
             </motion.h1>
 
             {/* Small uppercase spaced sub-label fading in after delay */}
-            <motion.p 
-              className="hero-spaced-label font-sans"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.7, duration: 0.6 }}
-            >
-              ORGANIC DAILY CELEBRATION BREADS AND BAKED GOODS · EST. 2024
-            </motion.p>
 
             <motion.p 
               className="hero-subheading font-sans"
