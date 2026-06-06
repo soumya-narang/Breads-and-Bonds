@@ -38,22 +38,7 @@
   line-height: 0.7;
 }
 
-/* Freshness Badge */
-.freshness-badge {
-  display: inline-flex;
-  align-items: center;
-  background: rgba(181, 90, 68, 0.06); /* Soft Rust background */
-  color: var(--color-text-main);
-  padding: 6px 14px;
-  border-radius: var(--radius-pill);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  margin-bottom: var(--space-md);
-  border: 1px solid rgba(181, 90, 68, 0.15);
-  width: fit-content;
-}
+
 
 .hero-section {
   min-height: calc(100dvh - 80px);

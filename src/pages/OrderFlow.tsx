@@ -467,18 +467,12 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate }) => {
             ))}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 'var(--space-xl)', gap: '10px' }}>
-            <h2 className="order-step-title font-serif" style={{ margin: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 'var(--space-xl)' }}>
+            <h2 className="order-step-title font-serif" style={{ margin: 0, textAlign: 'center' }}>
               {step === 1 && "Choose Your Cake"}
               {step === 2 && "Add Extras & Finishings"}
               {step === 3 && "Final Details"}
             </h2>
-            {step === 1 && (
-              <div className="freshness-badge font-sans" style={{ margin: 0, padding: '4px 10px', fontSize: '0.75rem' }}>
-                <FreshnessDot />
-                <span>Baked Fresh</span>
-              </div>
-            )}
           </div>
 
           {errors[`step${step}`] && (

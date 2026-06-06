@@ -192,7 +192,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
       <header className={`global-header ${scrolled ? 'scrolled' : 'transparent'}`}>
         <div className="container header-container">
           <div className="header-logo" onClick={() => onNavigate('home')}>
-            Breads & Bonds.
+            
           </div>
           <nav className="header-nav font-sans">
             <NavLink 
@@ -236,27 +236,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
       <footer className="global-footer font-sans">
         <div className="container footer-container">
           <p style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            © {new Date().getFullYear()} Breads & Bonds
-            <motion.span
-              className="footer-badge-dot"
-              animate={{
-                scale: [1, 1.4, 1],
-                opacity: [1, 0.4, 1]
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-              style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--color-accent)',
-                display: 'inline-block'
-              }}
-            />
-            All rights reserved.
+            © {new Date().getFullYear()} Breads & Bonds. All rights reserved.
           </p>
         </div>
       </footer>

@@ -36,25 +36,7 @@ const FloatingBread = React.memo(() => {
     >
       <div className="hero-image-placeholder">
         <div className="placeholder-inner">
-          <svg width="240" height="240" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0px 20px 40px rgba(44, 30, 22, 0.15))' }}>
-            {/* Sourdough bread base */}
-            <path d="M40 90C40 52 60 40 100 40C140 40 160 52 160 90C160 130 145 150 100 150C55 150 40 130 40 90Z" fill="#C9906B" />
-            <path d="M48 90C48 58 65 48 100 48C135 48 152 58 152 90C152 124 138 140 100 140C62 140 48 124 48 90Z" fill="#F4D3B5" />
-            
-            {/* Scores / cuts */}
-            <path d="M78 68C83 78 90 85 90 91" stroke="#A7704B" strokeWidth="6" strokeLinecap="round" />
-            <path d="M98 63C104 75 113 83 113 91" stroke="#A7704B" strokeWidth="6" strokeLinecap="round" />
-            <path d="M118 61C124 71 133 78 133 86" stroke="#A7704B" strokeWidth="6" strokeLinecap="round" />
-
-            {/* Seeds/Flour accents */}
-            <circle cx="85" cy="52" r="2.5" fill="white" opacity="0.8" />
-            <circle cx="115" cy="54" r="3" fill="white" opacity="0.8" />
-            <circle cx="100" cy="48" r="2" fill="white" opacity="0.8" />
-            <circle cx="70" cy="67" r="2" fill="white" opacity="0.6" />
-            
-            {/* Glowing path ring */}
-            <circle cx="100" cy="95" r="80" stroke="var(--color-accent)" strokeWidth="1" strokeDasharray="6 8" opacity="0.3" />
-          </svg>
+          <img src="/Breads-and-Bonds/hero-cake.png" alt="Breads & Bonds Artisanal Cake" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
         </div>
       </div>
     </motion.div>
@@ -62,30 +44,6 @@ const FloatingBread = React.memo(() => {
 });
 FloatingBread.displayName = 'FloatingBread';
 
-// 2. Breathing pulse dot for freshness badge & footer
-const PulseDot = React.memo(() => (
-  <motion.span
-    className="badge-dot"
-    animate={{
-      scale: [1, 1.4, 1],
-      opacity: [1, 0.4, 1]
-    }}
-    transition={{
-      duration: 2,
-      repeat: Infinity,
-      ease: "easeInOut"
-    }}
-    style={{
-      width: '8px',
-      height: '8px',
-      borderRadius: '50%',
-      backgroundColor: 'var(--color-accent)',
-      display: 'inline-block',
-      marginRight: '8px'
-    }}
-  />
-));
-PulseDot.displayName = 'PulseDot';
 
 // 3. Magnetic CTA Button component
 const MagneticButton: React.FC<{ children: React.ReactNode; onClick: () => void; className?: string }> = ({ children, onClick, className = '' }) => {
@@ -309,11 +267,6 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, session }) => {
         <div className="container hero-container">
           {/* Asymmetric layout - Text left */}
           <div className="hero-content">
-            <div className="freshness-badge font-sans">
-              <PulseDot />
-              <span className="badge-text">Freshly baked at 3:00 AM today</span>
-            </div>
-
             <div className="hero-label font-sans">Artisanal Bakery</div>
             
             {/* Word-by-word clipPath title reveal */}
