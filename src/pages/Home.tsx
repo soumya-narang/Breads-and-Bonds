@@ -1,103 +1,82 @@
-import React, { useState } from 'react';
+import React from 'react';
 import type { Page } from '../App';
+import type { Session } from '@supabase/supabase-js';
 import './Home.css';
-import { Cake, BookOpen, ScrollText } from 'lucide-react';
 
 interface HomeProps {
   onNavigate: (page: Page) => void;
+  session?: Session | null;
 }
 
-export const Home: React.FC<HomeProps> = ({ onNavigate }) => {
-  const [isOpening, setIsOpening] = useState(false);
-
-  const handleNavigate = (page: Page) => {
-    setIsOpening(true);
-    setTimeout(() => {
-      onNavigate(page);
-    }, 600); // Wait for door opening animation
-  };
-
+export const Home: React.FC<HomeProps> = ({ onNavigate, session }) => {
   return (
     <div className="home-page page-transition">
-      {/* Ambient background */}
-      <div className="home-ambient"></div>
-
-      <div className="home-content">
-        {/* The Vintage Door */}
-        <div className={`door-wrapper ${isOpening ? 'door-opening' : ''}`}>
-          <div className="door-frame">
-            <div className="door texture-wood">
-              {/* Top panel */}
-              <div className="door-panel door-panel-top">
-                <div className="door-glass">
-                  <div className="brand-lockup">
-                    <div className="brand-ornament">✦</div>
-                    <h1 className="brand-name">Breads<br /><span className="brand-ampersand">&</span><br />Bonds</h1>
-                    <p className="brand-tagline">Handcrafted Home Bakery</p>
-                    <div className="brand-ornament">✦</div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Bottom panel */}
-              <div className="door-panel door-panel-bottom">
-                <div className="door-panel-inset"></div>
-              </div>
-
-              {/* Handle */}
-              <div className="door-handle-area">
-                <div className="door-handle"></div>
-                <div className="door-keyhole"></div>
-              </div>
-
-              {/* Hinges */}
-              <div className="door-hinge door-hinge-top"></div>
-              <div className="door-hinge door-hinge-bottom"></div>
+      <section className="hero-section">
+        <div className="container hero-container">
+          <div className="hero-content animate-fade-up">
+            <div className="hero-label font-sans">Artisanal Bakery</div>
+            <h1 className="hero-heading font-serif">
+              Exceptional Bread,<br />
+              Lasting Bonds.
+            </h1>
+            <p className="hero-subheading font-sans">
+              Handcrafted daily using organic, locally sourced ingredients. 
+              Delivered fresh to your doorstep.
+            </p>
+            <div className="hero-actions">
+              <button className="btn-primary" onClick={() => onNavigate('order')}>
+                Start Your Order
+              </button>
+              {!session && (
+                <button className="btn-secondary" onClick={() => onNavigate('auth')}>
+                  Sign In
+                </button>
+              )}
             </div>
           </div>
-          {/* Door shadow on floor */}
-          <div className="door-floor-shadow"></div>
+          <div className="hero-visual animate-fade-up" style={{ animationDelay: '0.1s' }}>
+            <div className="hero-image-placeholder">
+              {/* In a real app, this would be a stunning high-res photo of bread */}
+              <div className="placeholder-inner">
+                <span className="font-serif">B&B</span>
+              </div>
+            </div>
+          </div>
         </div>
+      </section>
 
-        {/* The Chalkboard Menu */}
-        <div className="chalkboard-wrapper">
-          <div className="chalkboard texture-chalkboard">
-            <div className="chalk-header">
-              <div className="chalk-flourish">~</div>
-              <h2 className="chalk-title">Menu</h2>
-              <div className="chalk-flourish">~</div>
+      <section className="features-section">
+        <div className="container">
+          <div className="features-header text-center">
+            <h2 className="font-serif features-heading">Our Philosophy</h2>
+            <p className="font-sans features-subheading">Simple ingredients, time-honored techniques.</p>
+          </div>
+          
+          <div className="features-list">
+            <div className="feature-item">
+              <div className="feature-number font-serif">01</div>
+              <h3 className="feature-title font-sans">Organic Ingredients</h3>
+              <p className="feature-desc font-sans">We use only the finest, naturally sourced flour and wild yeast.</p>
             </div>
             
-            <nav className="chalk-nav">
-              <button className="chalk-btn" onClick={() => handleNavigate('order')}>
-                <Cake size={22} strokeWidth={1.5} />
-                <span className="chalk-btn-text">Order Now</span>
-                <span className="chalk-arrow">→</span>
-              </button>
-              
-              <div className="chalk-separator"></div>
-              
-              <button className="chalk-btn" onClick={() => handleNavigate('story')}>
-                <BookOpen size={22} strokeWidth={1.5} />
-                <span className="chalk-btn-text">Our Story</span>
-                <span className="chalk-arrow">→</span>
-              </button>
-              
-              <div className="chalk-separator"></div>
-              
-              <button className="chalk-btn" onClick={() => handleNavigate('policies')}>
-                <ScrollText size={22} strokeWidth={1.5} />
-                <span className="chalk-btn-text">Policies</span>
-                <span className="chalk-arrow">→</span>
-              </button>
-            </nav>
-
-            <div className="chalk-footer">
-              <p className="chalk-note">Baked fresh, with love ♥</p>
+            <div className="feature-divider" />
+            
+            <div className="feature-item">
+              <div className="feature-number font-serif">02</div>
+              <h3 className="feature-title font-sans">Baked Fresh Daily</h3>
+              <p className="feature-desc font-sans">Every loaf is baked the morning of your delivery for maximum freshness.</p>
+            </div>
+            
+            <div className="feature-divider" />
+            
+            <div className="feature-item">
+              <div className="feature-number font-serif">03</div>
+              <h3 className="feature-title font-sans">Community First</h3>
+              <p className="feature-desc font-sans">A portion of every sale goes directly to local community kitchens.</p>
             </div>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 };

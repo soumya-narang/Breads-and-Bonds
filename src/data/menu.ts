@@ -2,9 +2,18 @@ export type MenuItem = {
   id: string;
   name: string;
   price: number;
+  description?: string; // Added description for bestsellers
 };
 
 export const menuData = {
+  bestsellers: [
+    { id: 'bs1', name: 'Whole-Wheat Chocochips Cake', description: 'Our signature whole-wheat base loaded with premium dark choco chips.', price: 550 },
+    { id: 'bs2', name: 'Marble Cake', description: 'A beautiful swirl of vanilla and rich cocoa in a classic sponge.', price: 480 },
+    { id: 'bs3', name: 'Tooty-Fruity Cake', description: 'Nostalgic vanilla cake studded with candied fruits and nuts.', price: 450 },
+    { id: 'bs4', name: 'Classic Chocolate Cake', description: 'Deep, rich cocoa sponge with a perfect crumb.', price: 500 },
+    { id: 'bs5', name: 'Dates & Walnuts Cake', description: 'Naturally sweetened with premium dates and packed with plain walnuts.', price: 600 },
+    { id: 'bs6', name: 'Vanilla Cake', description: 'A light, classic refined flour sponge with the pure essence of vanilla.', price: 400 },
+  ],
   bases: [
     { id: 'b1', name: 'Maida/Refined Flour', price: 230 },
     { id: 'b2', name: 'Whole Wheat', price: 250 },
