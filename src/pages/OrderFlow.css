@@ -1,10 +1,10 @@
-/* ===== ORDER PAGE (Warm Modernism) ===== */
+/* ===== ORDER PAGE (Warm Modernism with Framer Motion) ===== */
 .order-page {
   display: flex;
   flex-direction: column;
   padding: var(--space-xl) 0 var(--space-4xl);
   background: var(--color-bg);
-  min-height: calc(100vh - 80px);
+  min-height: calc(100dvh - 80px);
 }
 
 /* Header */
@@ -51,7 +51,7 @@
   flex: 5;
   background: var(--color-surface);
   border-radius: var(--radius-lg);
-  padding: var(--space-2xl) var(--space-xl);
+  padding: var(--space-xl) var(--space-md);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--color-border);
 }
@@ -131,7 +131,6 @@
   text-align: center;
   font-size: 2rem;
   color: var(--color-text-main);
-  margin-bottom: var(--space-lg);
   font-weight: 500;
 }
 
@@ -174,15 +173,77 @@
   border-left: 3px solid #B91C1C;
 }
 
-/* Section Labels */
-.custom-section {
-  margin-bottom: var(--space-2xl);
+/* Card Grids */
+.card-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-md);
+  width: 100%;
 }
+
+/* Bento Grid (Asymmetric Layout for Bestsellers) */
+.bento-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+  perspective: 1000px;
+}
+
+@media (min-width: 600px) {
+  .bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 992px) {
+  .bento-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .bento-card-1 {
+    grid-column: span 2;
+    grid-row: span 1;
+  }
+  
+  .bento-card-5 {
+    grid-column: span 2;
+    grid-row: span 1;
+  }
+}
+
+/* Asymmetric 2-Column Zig-Zag Custom builder layouts */
+.zigzag-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-3xl);
+  align-items: stretch;
+}
+
+.zigzag-info {
+  flex: 1;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.zigzag-cards {
+  flex: 2;
+}
+
 .section-label {
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   font-weight: 500;
   color: var(--color-text-main);
-  margin-bottom: var(--space-md);
+  margin-bottom: 6px;
+}
+
+.section-desc {
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin-bottom: var(--space-lg);
 }
 
 .label-optional {
@@ -191,19 +252,16 @@
   font-weight: 400;
 }
 
-/* Card Grid */
-.card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: var(--space-md);
-}
-
-.bestseller-grid {
-  grid-template-columns: 1fr;
-}
-@media (min-width: 600px) {
-  .bestseller-grid {
-    grid-template-columns: 1fr 1fr;
+@media (min-width: 768px) {
+  .zigzag-section {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-3xl);
+  }
+  
+  .zigzag-section:nth-child(even) {
+    flex-direction: row-reverse;
   }
 }
 
@@ -211,32 +269,31 @@
 .menu-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: 20px;
+  border-radius: var(--radius-md);
+  padding: 24px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   position: relative;
-  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  transform-style: preserve-3d;
+  min-height: 140px;
+  box-shadow: var(--shadow-sm);
 }
 
-.bestseller-grid .menu-card {
+.bento-card {
   align-items: flex-start;
   text-align: left;
-}
-
-.menu-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
-  border-color: var(--color-text-muted);
+  min-height: 200px;
 }
 
 .card-check {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 16px;
+  right: 16px;
   width: 22px;
   height: 22px;
   border-radius: 50%;
@@ -245,7 +302,8 @@
   align-items: center;
   justify-content: center;
   color: #fff;
-  transition: all 0.2s ease;
+  z-index: 10;
+  background: var(--color-surface);
 }
 
 .menu-card.selected .card-check {
@@ -255,15 +313,16 @@
 
 .card-icon {
   color: var(--color-accent);
-  margin-bottom: var(--space-sm);
+  margin-bottom: var(--space-md);
+  z-index: 5;
 }
 
 .card-name {
-  font-family: var(--font-serif);
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 500;
   color: var(--color-text-main);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  z-index: 5;
 }
 
 .card-desc {
@@ -271,19 +330,21 @@
   color: var(--color-text-muted);
   line-height: 1.5;
   margin-bottom: var(--space-md);
+  z-index: 5;
 }
 
 .card-price {
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--color-accent);
   margin-top: auto;
+  z-index: 5;
 }
 
 .menu-card.selected {
   border-color: var(--color-text-main);
   background: rgba(44, 30, 22, 0.02);
-  box-shadow: 0 0 0 1px var(--color-text-main);
+  box-shadow: 0 0 0 1px var(--color-text-main), var(--shadow-md);
 }
 
 /* Step Navigation */
@@ -494,7 +555,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-4xl) var(--space-lg);
-  min-height: calc(100vh - 80px);
+  min-height: calc(100dvh - 80px);
 }
 
 .receipt-container {

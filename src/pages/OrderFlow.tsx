@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { Page } from '../App';
 import { menuData } from '../data/menu';
 import type { MenuItem } from '../data/menu';
 import { ArrowLeft, ChevronRight, Check, ShoppingBag, Wheat, Leaf, Sprout, Coffee, Sparkles, Gift, Flame, Droplet, Star, Award } from 'lucide-react';
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import './OrderFlow.css';
 
 interface Props {
@@ -50,6 +51,211 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   'a6': <Gift size={32} strokeWidth={1.5} />,
 };
 
+// 1. Particle Burst components
+interface Particle {
+  id: number;
+  x: number;
+  y: number;
+}
+
+const ParticleBurst: React.FC<{ particles: Particle[] }> = ({ particles }) => {
+  return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 99 }}>
+      {particles.map(p => (
+        <motion.span
+          key={p.id}
+          initial={{ x: 0, y: 0, scale: 1, opacity: 1 }}
+          animate={{
+            x: p.x,
+            y: p.y,
+            scale: 0.25,
+            opacity: 0
+          }}
+          transition={{ duration: 0.65, ease: "easeOut" }}
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            width: '6px',
+            height: '6px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--color-accent)',
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
+// 2. Interactive Card Component (Tilt, Spotlight Border, Active state)
+interface InteractiveCardProps {
+  item: MenuItem;
+  isSelected: boolean;
+  onClick: () => void;
+  icon?: React.ReactNode;
+  isBento?: boolean;
+  index: number;
+  pricePrefix?: string;
+}
+
+const InteractiveCard: React.FC<InteractiveCardProps> = ({ item, isSelected, onClick, icon, isBento = false, index, pricePrefix = '' }) => {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const spotlightX = useMotionValue(0);
+  const spotlightY = useMotionValue(0);
+
+  const rotateX = useTransform(y, [-0.5, 0.5], [8, -8]);
+  const rotateY = useTransform(x, [-0.5, 0.5], [-8, 8]);
+
+  const springRotateX = useSpring(rotateX, { stiffness: 120, damping: 18 });
+  const springRotateY = useSpring(rotateY, { stiffness: 120, damping: 18 });
+
+  const spotlightBg = useTransform(
+    [spotlightX, spotlightY],
+    ([sx, sy]) => `radial-gradient(150px circle at ${sx}px ${sy}px, rgba(181, 90, 68, 0.12), transparent 85%)`
+  );
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    x.set((mouseX / rect.width) - 0.5);
+    y.set((mouseY / rect.height) - 0.5);
+    
+    spotlightX.set(mouseX);
+    spotlightY.set(mouseY);
+  };
+
+  const handleMouseLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
+
+  const bentoClass = isBento ? `bento-card bento-card-${(index % 5) + 1}` : '';
+
+  return (
+    <motion.div
+      className={`menu-card ${isSelected ? 'selected' : ''} ${bentoClass}`}
+      onClick={onClick}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      whileTap={{ scale: 0.98 }}
+      style={{
+        rotateX: springRotateX,
+        rotateY: springRotateY,
+        transformStyle: 'preserve-3d',
+        perspective: '1000px',
+        position: 'relative'
+      }}
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -15 }}
+      transition={{ duration: 0.4, delay: index * 0.05 }}
+    >
+      {/* Spotlight illumination border effect */}
+      <motion.div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: spotlightBg,
+          pointerEvents: 'none',
+          zIndex: 1,
+          borderRadius: 'inherit'
+        }}
+      />
+      
+      <div className="card-check" style={{ transform: 'translateZ(15px)' }}>
+        {isSelected && <Check size={14} />}
+      </div>
+      
+      {icon && (
+        <div className="card-icon" style={{ transform: 'translateZ(20px)' }}>
+          {icon}
+        </div>
+      )}
+      
+      <h4 className="card-name font-serif" style={{ transform: 'translateZ(15px)' }}>
+        {item.name}
+      </h4>
+      
+      {item.description && (
+        <p className="card-desc font-sans" style={{ transform: 'translateZ(10px)' }}>
+          {item.description}
+        </p>
+      )}
+      
+      <span className="card-price font-sans" style={{ transform: 'translateZ(15px)' }}>
+        {pricePrefix}₹{item.price}
+      </span>
+    </motion.div>
+  );
+};
+
+// 3. Burst Button Component
+interface BurstButtonProps {
+  children: React.ReactNode;
+  onClick: () => void;
+  className?: string;
+  disabled?: boolean;
+}
+
+const BurstButton: React.FC<BurstButtonProps> = ({ children, onClick, className = '', disabled = false }) => {
+  const [particles, setParticles] = useState<Particle[]>([]);
+
+  const handleTrigger = () => {
+    if (disabled) return;
+    
+    const burstParticles = Array.from({ length: 16 }).map((_, i) => {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 35 + Math.random() * 55;
+      return {
+        id: Date.now() + i,
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance
+      };
+    });
+
+    setParticles(burstParticles);
+    setTimeout(() => setParticles([]), 750);
+    
+    onClick();
+  };
+
+  return (
+    <button className={className} onClick={handleTrigger} disabled={disabled} style={{ position: 'relative' }}>
+      {children}
+      <ParticleBurst particles={particles} />
+    </button>
+  );
+};
+
+// 4. Freshness Dot Badge for Steps
+const FreshnessDot = React.memo(() => (
+  <motion.span
+    animate={{
+      scale: [1, 1.4, 1],
+      opacity: [1, 0.4, 1]
+    }}
+    transition={{
+      duration: 1.8,
+      repeat: Infinity,
+      ease: "easeInOut"
+    }}
+    style={{
+      width: '8px',
+      height: '8px',
+      borderRadius: '50%',
+      backgroundColor: 'var(--color-sage)',
+      display: 'inline-block',
+      marginRight: '8px',
+      verticalAlign: 'middle'
+    }}
+  />
+));
+FreshnessDot.displayName = 'FreshnessDot';
+
 export const OrderFlow: React.FC<Props> = ({ onNavigate }) => {
   const [step, setStep] = useState(1);
   const [order, setOrder] = useState<OrderState>({
@@ -67,6 +273,11 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate }) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+
+  // Auto-scroll on step change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [step]);
 
   const toggleAdditional = (item: MenuItem) => {
     setOrder(prev => {
@@ -116,11 +327,9 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate }) => {
       }
       setErrors({});
       setStep(2);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (step === 2) {
       setErrors({});
       setStep(3);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (step === 3) {
       const newErrors: Record<string, string> = {};
       if (!order.date) newErrors.date = "Please pick a date for your celebration.";
@@ -132,20 +341,18 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate }) => {
       }
       setErrors({});
       setIsSubmitted(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const handleBack = () => {
     setErrors({});
     setStep(step - 1);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   /* ====== RECEIPT VIEW ====== */
   if (isSubmitted) {
     return (
-      <div className="receipt-page page-transition">
+      <div className="receipt-page page-transition min-h-[100dvh]">
         <div className="receipt-container">
           <div className="receipt-paper">
             <div className="receipt-body">
@@ -207,20 +414,20 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate }) => {
 
               <div className="receipt-divider"></div>
 
-              <div className="receipt-details">
+              <div className="receipt-details font-sans">
                 <p><strong>Date:</strong> {order.date}</p>
                 <p><strong>Time:</strong> {order.time}</p>
                 <p><strong>Phone:</strong> {order.phone}</p>
                 {order.requests && <p><strong>Notes:</strong> {order.requests}</p>}
               </div>
 
-              <p className="receipt-whatsapp">
+              <p className="receipt-whatsapp font-sans">
                 You will receive confirmation via WhatsApp shortly.
               </p>
 
-              <button className="btn-primary receipt-btn" onClick={() => onNavigate('home')}>
+              <BurstButton className="btn-primary receipt-btn" onClick={() => onNavigate('home')}>
                 Back to Home
-              </button>
+              </BurstButton>
             </div>
           </div>
         </div>
@@ -230,9 +437,9 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate }) => {
 
   /* ====== ORDER FORM ====== */
   return (
-    <div className="order-page page-transition">
+    <div className="order-page page-transition min-h-[100dvh]">
       <div className="order-header">
-        <button className="back-link" onClick={() => onNavigate('home')}>
+        <button className="back-link font-sans" onClick={() => onNavigate('home')}>
           <ArrowLeft size={18} />
           <span>Back to Menu</span>
         </button>
@@ -260,23 +467,31 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate }) => {
             ))}
           </div>
 
-          <h2 className="order-step-title font-serif">
-            {step === 1 && "Choose Your Cake"}
-            {step === 2 && "Add Extras & Finishings"}
-            {step === 3 && "Final Details"}
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 'var(--space-xl)', gap: '10px' }}>
+            <h2 className="order-step-title font-serif" style={{ margin: 0 }}>
+              {step === 1 && "Choose Your Cake"}
+              {step === 2 && "Add Extras & Finishings"}
+              {step === 3 && "Final Details"}
+            </h2>
+            {step === 1 && (
+              <div className="freshness-badge font-sans" style={{ margin: 0, padding: '4px 10px', fontSize: '0.75rem' }}>
+                <FreshnessDot />
+                <span>Baked Fresh</span>
+              </div>
+            )}
+          </div>
 
           {errors[`step${step}`] && (
-            <div className="order-error animate-fade-up">
+            <div className="order-error font-sans">
               <span>{errors[`step${step}`]}</span>
             </div>
           )}
 
-          <div className="step-body animate-fade-up" key={step}>
+          <div className="step-body" key={step}>
             {step === 1 && (
               <>
                 {/* Flow Selection Tabs */}
-                <div className="order-tabs">
+                <div className="order-tabs font-sans">
                   <button 
                     className={`order-tab ${order.orderType === 'bestseller' ? 'active' : ''}`}
                     onClick={() => {
@@ -297,158 +512,192 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate }) => {
                   </button>
                 </div>
 
-                {order.orderType === 'bestseller' ? (
-                  <div className="card-grid bestseller-grid">
-                    {menuData.bestsellers.map(item => (
-                      <div
-                        key={item.id}
-                        className={`menu-card hover-lift ${order.bestseller?.id === item.id ? 'selected' : ''}`}
-                        onClick={() => setOrder({ ...order, bestseller: item })}
-                      >
-                        <div className="card-check">{order.bestseller?.id === item.id && <Check size={16} />}</div>
-                        <div className="card-icon"><Award size={32} strokeWidth={1.5} /></div>
-                        <h4 className="card-name">{item.name}</h4>
-                        <p className="card-desc font-sans">{item.description}</p>
-                        <span className="card-price">₹{item.price}</span>
+                <AnimatePresence mode="wait">
+                  {order.orderType === 'bestseller' ? (
+                    <motion.div 
+                      className="bento-grid"
+                      key="bestseller-grid"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {menuData.bestsellers.map((item, index) => (
+                        <InteractiveCard
+                          key={item.id}
+                          item={item}
+                          isSelected={order.bestseller?.id === item.id}
+                          onClick={() => setOrder({ ...order, bestseller: item })}
+                          icon={<Award size={32} strokeWidth={1.5} />}
+                          isBento={true}
+                          index={index}
+                        />
+                      ))}
+                    </motion.div>
+                  ) : (
+                    <motion.div 
+                      className="custom-build-sections"
+                      key="custom-grid"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {/* Section 1: Choose a Base (Zig-Zag) */}
+                      <div className="zigzag-section">
+                        <div className="zigzag-info">
+                          <h3 className="section-label font-serif">1. Choose a Base</h3>
+                          <p className="section-desc font-sans">Select the grains and texture that form the soul of your artisanal cake base.</p>
+                        </div>
+                        <div className="zigzag-cards card-grid-2">
+                          {menuData.bases.map((item, index) => (
+                            <InteractiveCard
+                              key={item.id}
+                              item={item}
+                              isSelected={order.base?.id === item.id}
+                              onClick={() => setOrder({ ...order, base: item })}
+                              icon={ICON_MAP[item.id]}
+                              index={index}
+                            />
+                          ))}
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="custom-build-sections">
-                    <div className="custom-section">
-                      <h3 className="section-label font-serif">1. Choose a Base</h3>
-                      <div className="card-grid">
-                        {menuData.bases.map(item => (
-                          <div
-                            key={item.id}
-                            className={`menu-card hover-lift ${order.base?.id === item.id ? 'selected' : ''}`}
-                            onClick={() => setOrder({ ...order, base: item })}
-                          >
-                            <div className="card-check">{order.base?.id === item.id && <Check size={16} />}</div>
-                            <div className="card-icon">{ICON_MAP[item.id]}</div>
-                            <h4 className="card-name">{item.name}</h4>
-                            <span className="card-price">₹{item.price}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
 
-                    <div className="custom-section">
-                      <h3 className="section-label font-serif">2. Choose a Sweetener</h3>
-                      <div className="card-grid">
-                        {menuData.sweeteners.map(item => (
-                          <div
-                            key={item.id}
-                            className={`menu-card hover-lift ${order.sweetener?.id === item.id ? 'selected' : ''}`}
-                            onClick={() => setOrder({ ...order, sweetener: item })}
-                          >
-                            <div className="card-check">{order.sweetener?.id === item.id && <Check size={16} />}</div>
-                            <div className="card-icon">{ICON_MAP[item.id]}</div>
-                            <h4 className="card-name">{item.name}</h4>
-                            <span className="card-price">₹{item.price}</span>
-                          </div>
-                        ))}
+                      {/* Section 2: Choose a Sweetener (Zig-Zag Reversed) */}
+                      <div className="zigzag-section">
+                        <div className="zigzag-info">
+                          <h3 className="section-label font-serif">2. Choose a Sweetener</h3>
+                          <p className="section-desc font-sans">Sweeten your cake naturally with clean organic sugars, honey, or dates.</p>
+                        </div>
+                        <div className="zigzag-cards card-grid-2">
+                          {menuData.sweeteners.map((item, index) => (
+                            <InteractiveCard
+                              key={item.id}
+                              item={item}
+                              isSelected={order.sweetener?.id === item.id}
+                              onClick={() => setOrder({ ...order, sweetener: item })}
+                              icon={ICON_MAP[item.id]}
+                              index={index}
+                            />
+                          ))}
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="custom-section">
-                      <h3 className="section-label font-serif">3. Pick a Flavour</h3>
-                      <div className="card-grid">
-                        {menuData.flavours.map(item => (
-                          <div
-                            key={item.id}
-                            className={`menu-card hover-lift ${order.flavour?.id === item.id ? 'selected' : ''}`}
-                            onClick={() => setOrder({ ...order, flavour: item })}
-                          >
-                            <div className="card-check">{order.flavour?.id === item.id && <Check size={16} />}</div>
-                            <div className="card-icon">{ICON_MAP[item.id]}</div>
-                            <h4 className="card-name">{item.name}</h4>
-                            <span className="card-price">₹{item.price}</span>
-                          </div>
-                        ))}
+                      {/* Section 3: Pick a Flavour (Zig-Zag) */}
+                      <div className="zigzag-section">
+                        <div className="zigzag-info">
+                          <h3 className="section-label font-serif">3. Pick a Flavour</h3>
+                          <p className="section-desc font-sans">Infuse your creation with fine chocolates, classic vanilla, or warm butterscotch notes.</p>
+                        </div>
+                        <div className="zigzag-cards card-grid-2">
+                          {menuData.flavours.map((item, index) => (
+                            <InteractiveCard
+                              key={item.id}
+                              item={item}
+                              isSelected={order.flavour?.id === item.id}
+                              onClick={() => setOrder({ ...order, flavour: item })}
+                              icon={ICON_MAP[item.id]}
+                              index={index}
+                            />
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </>
             )}
 
             {step === 2 && (
-              <>
-                <h3 className="section-label font-serif">Add Extras <span className="label-optional font-sans">(optional, multi-select)</span></h3>
-                <div className="card-grid">
-                  {menuData.additionals.map(item => {
-                    const sel = order.additionals.some(a => a.id === item.id);
-                    return (
-                      <div
-                        key={item.id}
-                        className={`menu-card hover-lift ${sel ? 'selected' : ''}`}
-                        onClick={() => toggleAdditional(item)}
-                      >
-                        <div className="card-check">{sel && <Check size={16} />}</div>
-                        <div className="card-icon">{ICON_MAP[item.id]}</div>
-                        <h4 className="card-name">{item.name}</h4>
-                        <span className="card-price">+₹{item.price}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  key="step2-content"
+                >
+                  <h3 className="section-label font-serif">Add Extras <span className="label-optional font-sans">(optional, multi-select)</span></h3>
+                  <div className="card-grid-2">
+                    {menuData.additionals.map((item, index) => {
+                      const sel = order.additionals.some(a => a.id === item.id);
+                      return (
+                        <InteractiveCard
+                          key={item.id}
+                          item={item}
+                          isSelected={sel}
+                          onClick={() => toggleAdditional(item)}
+                          icon={ICON_MAP[item.id]}
+                          index={index}
+                          pricePrefix="+"
+                        />
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              </AnimatePresence>
             )}
 
             {step === 3 && (
-              <div className="details-form">
-                <div className="form-row">
-                  <div className="form-field">
-                    <label>Pickup/Delivery Date <span className="required">*</span></label>
-                    <input type="date" value={order.date} onChange={e => setOrder({ ...order, date: e.target.value })} />
-                    {errors.date && <span className="field-error">{errors.date}</span>}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  className="details-form font-sans"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  key="step3-content"
+                >
+                  <div className="form-row">
+                    <div className="form-field">
+                      <label>Pickup/Delivery Date <span className="required">*</span></label>
+                      <input type="date" value={order.date} onChange={e => setOrder({ ...order, date: e.target.value })} />
+                      {errors.date && <span className="field-error">{errors.date}</span>}
+                    </div>
+                    <div className="form-field">
+                      <label>Preferred Time <span className="required">*</span></label>
+                      <input type="time" value={order.time} onChange={e => setOrder({ ...order, time: e.target.value })} />
+                      {errors.time && <span className="field-error">{errors.time}</span>}
+                    </div>
                   </div>
+
                   <div className="form-field">
-                    <label>Preferred Time <span className="required">*</span></label>
-                    <input type="time" value={order.time} onChange={e => setOrder({ ...order, time: e.target.value })} />
-                    {errors.time && <span className="field-error">{errors.time}</span>}
+                    <label>Phone Number <span className="required">*</span></label>
+                    <input
+                      type="tel"
+                      placeholder="e.g. 9876543210"
+                      value={order.phone}
+                      onChange={e => setOrder({ ...order, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                    />
+                    {errors.phone && <span className="field-error">{errors.phone}</span>}
                   </div>
-                </div>
 
-                <div className="form-field">
-                  <label>Phone Number <span className="required">*</span></label>
-                  <input
-                    type="tel"
-                    placeholder="e.g. 9876543210"
-                    value={order.phone}
-                    onChange={e => setOrder({ ...order, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                  />
-                  {errors.phone && <span className="field-error">{errors.phone}</span>}
-                </div>
+                  <div className="form-field">
+                    <label>Special Requests</label>
+                    <textarea
+                      rows={3}
+                      placeholder="Any message, allergy info, or decorations..."
+                      value={order.requests}
+                      onChange={e => setOrder({ ...order, requests: e.target.value })}
+                    ></textarea>
+                  </div>
 
-                <div className="form-field">
-                  <label>Special Requests</label>
-                  <textarea
-                    rows={3}
-                    placeholder="Any message, allergy info, or decorations..."
-                    value={order.requests}
-                    onChange={e => setOrder({ ...order, requests: e.target.value })}
-                  ></textarea>
-                </div>
-
-                <div className="form-note">
-                  <p>You will receive an order confirmation via <strong>WhatsApp</strong>.</p>
-                </div>
-              </div>
+                  <div className="form-note">
+                    <p>You will receive an order confirmation via <strong>WhatsApp</strong>.</p>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
             )}
           </div>
 
           <div className="step-nav">
             {step > 1 && (
-              <button className="btn-secondary" onClick={handleBack}>
+              <button className="btn-secondary font-sans" onClick={handleBack}>
                 Back
               </button>
             )}
-            <button className="btn-primary ml-auto" onClick={handleNext}>
+            <BurstButton className="btn-primary ml-auto font-sans" onClick={handleNext}>
               {step === 3 ? 'Place Order' : 'Continue'}
               {step < 3 && <ChevronRight size={18} style={{ marginLeft: '4px' }} />}
-            </button>
+            </BurstButton>
           </div>
         </div>
 
@@ -471,7 +720,7 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate }) => {
       {mobileSheetOpen && (
         <>
           <div className="sheet-overlay" onClick={() => setMobileSheetOpen(false)}></div>
-          <div className="mobile-sheet animate-fade-up">
+          <div className="mobile-sheet">
             <div className="sheet-handle" onClick={() => setMobileSheetOpen(false)}></div>
             <OrderSummaryContent order={order} total={total} />
           </div>

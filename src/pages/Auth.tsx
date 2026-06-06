@@ -83,9 +83,10 @@ export const Auth: React.FC<AuthProps> = ({ onNavigate, session }) => {
         // Successful sign-up & profile creation: Proceed to the order page
         onNavigate('order');
       }
-    } catch (err: any) {
+    } catch (err) {
+      const errorObject = err as Error;
       // Catch and elegantly display any Supabase errors (e.g., "Email already registered")
-      setError(err.message || 'An error occurred during authentication.');
+      setError(errorObject.message || 'An error occurred during authentication.');
     } finally {
       // Stop the loading indicator regardless of success or failure
       setLoading(false);
