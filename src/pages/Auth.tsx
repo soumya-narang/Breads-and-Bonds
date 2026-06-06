@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import type { Page } from '../App';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
 import './Auth.css';
 import './Pages.css'; // For shared layout like page-header, back-link
