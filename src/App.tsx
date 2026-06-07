@@ -33,7 +33,7 @@ function App() {
       case 'home':
         return <Home onNavigate={setCurrentPage} />;
       case 'order':
-        return <OrderFlow onNavigate={setCurrentPage} />;
+        return <OrderFlow onNavigate={setCurrentPage} session={session} />;
       case 'story':
         return <OurStory onNavigate={setCurrentPage} />;
       case 'policies':

@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Page } from '../App';
+import type { Session } from '@supabase/supabase-js';
 import { menuData } from '../data/menu';
 import type { MenuItem } from '../data/menu';
 import { ArrowLeft, ChevronRight, Check, ShoppingBag, Wheat, Leaf, Sprout, Coffee, Sparkles, Gift, Flame, Droplet, Star, Award } from 'lucide-react';
@@ -8,6 +9,7 @@ import './OrderFlow.css';
 
 interface Props {
   onNavigate: (page: Page) => void;
+  session?: Session | null;
 }
 
 type OrderType = 'bestseller' | 'custom';
@@ -23,6 +25,8 @@ type OrderState = {
   time: string;
   phone: string;
   requests: string;
+  fullName: string;
+  deliveryAddress: string;
 };
 
 const ICON_MAP: Record<string, React.ReactNode> = {
@@ -256,7 +260,7 @@ const FreshnessDot = React.memo(() => (
 ));
 FreshnessDot.displayName = 'FreshnessDot';
 
-export const OrderFlow: React.FC<Props> = ({ onNavigate }) => {
+export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
   const [step, setStep] = useState(1);
   const [order, setOrder] = useState<OrderState>({
     orderType: 'bestseller',
@@ -268,11 +272,26 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate }) => {
     date: '',
     time: '',
     phone: '',
-    requests: ''
+    requests: '',
+    fullName: '',
+    deliveryAddress: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+
+  // Restore cart if returning from auth (Using localStorage to survive new tabs from Magic Links)
+  useEffect(() => {
+    const saved = localStorage.getItem('bbCartState');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setOrder(parsed.order);
+        setStep(parsed.step);
+        localStorage.removeItem('bbCartState');
+      } catch (e) {}
+    }
+  }, []);
 
   // Auto-scroll on step change
   useEffect(() => {
@@ -332,6 +351,10 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate }) => {
       setStep(3);
     } else if (step === 3) {
       const newErrors: Record<string, string> = {};
+      if (!session) {
+        if (!order.fullName) newErrors.fullName = "Please enter your name.";
+        if (!order.deliveryAddress) newErrors.deliveryAddress = "Please enter a delivery address.";
+      }
       if (!order.date) newErrors.date = "Please pick a date for your celebration.";
       if (!order.time) newErrors.time = "What time works best for you?";
       if (!order.phone || order.phone.length < 10) newErrors.phone = "We need your phone number to confirm your order!";
@@ -640,6 +663,31 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate }) => {
                   exit={{ opacity: 0 }}
                   key="step3-content"
                 >
+                  {!session && (
+                    <div className="guest-banner font-sans" style={{ background: 'var(--color-surface)', padding: '16px', borderRadius: '8px', marginBottom: '24px', border: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                      <span>Returning customer?</span>
+                      <button className="btn-secondary" onClick={() => {
+                        localStorage.setItem('bbCartState', JSON.stringify({ order, step: 3 }));
+                        onNavigate('auth');
+                      }} style={{ padding: '8px 16px', fontSize: '0.9rem' }}>Sign in for faster checkout</button>
+                    </div>
+                  )}
+
+                  {!session && (
+                    <>
+                      <div className="form-field">
+                        <label>Full Name <span className="required">*</span></label>
+                        <input type="text" value={order.fullName} onChange={e => setOrder({ ...order, fullName: e.target.value })} />
+                        {errors.fullName && <span className="field-error">{errors.fullName}</span>}
+                      </div>
+                      <div className="form-field">
+                        <label>Delivery Address <span className="required">*</span></label>
+                        <textarea rows={2} value={order.deliveryAddress} onChange={e => setOrder({ ...order, deliveryAddress: e.target.value })}></textarea>
+                        {errors.deliveryAddress && <span className="field-error">{errors.deliveryAddress}</span>}
+                      </div>
+                    </>
+                  )}
+
                   <div className="form-row">
                     <div className="form-field">
                       <label>Pickup/Delivery Date <span className="required">*</span></label>

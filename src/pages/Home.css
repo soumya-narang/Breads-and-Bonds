@@ -137,24 +137,31 @@
 
 .hero-image-placeholder {
   width: 100%;
-  max-width: 320px;
+  max-width: 360px; /* Slightly larger to fit the organic shape */
   aspect-ratio: 1/1;
-  background: var(--color-surface);
-  border-radius: 50%;
-  box-shadow: var(--shadow-lg);
-  padding: 16px;
+  background: transparent;
+  padding: 0;
   position: relative;
-  border: 1px solid var(--color-border);
 }
 
 .placeholder-inner {
   width: 100%;
   height: 100%;
   background: #FAF8F5;
-  border-radius: 50%;
+  border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+  animation: morphingDough 14s ease-in-out infinite;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 1px solid rgba(122, 82, 48, 0.15);
+  box-shadow: 0 10px 40px -10px rgba(122, 82, 48, 0.06);
+}
+
+@keyframes morphingDough {
+  0% { border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%; }
+  33% { border-radius: 55% 45% 45% 55% / 55% 35% 65% 45%; }
+  66% { border-radius: 35% 65% 55% 45% / 40% 60% 40% 60%; }
+  100% { border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%; }
 }
 
 /* ===== FEATURES / PHILOSOPHY SECTION (Kiran-Inspired Overhaul) ===== */
