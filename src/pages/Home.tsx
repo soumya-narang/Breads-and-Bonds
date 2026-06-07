@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import type { Page } from '../App';
 import type { Session } from '@supabase/supabase-js';
 import { motion, useScroll, useTransform, useMotionValue, useSpring, useInView } from 'framer-motion';
+import { CakeLogo } from '../components/CakeLogo';
 import './Home.css';
 
 interface HomeProps {
@@ -36,7 +37,7 @@ const FloatingBread = React.memo(() => {
     >
       <div className="hero-image-placeholder">
         <div className="placeholder-inner">
-          <img src="/Breads-and-Bonds/hero-cake.png" alt="Breads & Bonds Artisanal Cake" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+          <CakeLogo style={{ width: '100%', height: '100%' }} />
         </div>
       </div>
     </motion.div>
