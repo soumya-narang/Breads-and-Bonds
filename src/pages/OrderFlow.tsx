@@ -3,7 +3,7 @@ import type { Page } from '../App';
 import type { Session } from '@supabase/supabase-js';
 import { menuData } from '../data/menu';
 import type { MenuItem } from '../data/menu';
-import { ArrowLeft, ChevronRight, Check, ShoppingBag, Wheat, Leaf, Sprout, Coffee, Sparkles, Gift, Flame, Droplet, Star, Award } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Check, ShoppingBag, Wheat, Leaf, Sprout, Coffee, Sparkles, Gift, Flame, Droplet, Star, Award, Minus, Plus, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import './OrderFlow.css';
 
@@ -14,13 +14,18 @@ interface Props {
 
 type OrderType = 'bestseller' | 'custom';
 
-type OrderState = {
+export interface CartItem {
+  id: string;
   orderType: OrderType;
   bestseller: MenuItem | null;
   base: MenuItem | null;
   sweetener: MenuItem | null;
   flavour: MenuItem | null;
   additionals: MenuItem[];
+  quantity: number;
+}
+
+type CheckoutDetails = {
   date: string;
   time: string;
   phone: string;
@@ -55,7 +60,6 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   'a6': <Gift size={32} strokeWidth={1.5} />,
 };
 
-// 1. Particle Burst components
 interface Particle {
   id: number;
   x: number;
@@ -91,7 +95,6 @@ const ParticleBurst: React.FC<{ particles: Particle[] }> = ({ particles }) => {
   );
 };
 
-// 2. Interactive Card Component (Tilt, Spotlight Border, Active state)
 interface InteractiveCardProps {
   item: MenuItem;
   isSelected: boolean;
@@ -158,7 +161,6 @@ const InteractiveCard: React.FC<InteractiveCardProps> = ({ item, isSelected, onC
       exit={{ opacity: 0, y: -15 }}
       transition={{ duration: 0.4, delay: index * 0.05 }}
     >
-      {/* Spotlight illumination border effect */}
       <motion.div
         style={{
           position: 'absolute',
@@ -197,7 +199,6 @@ const InteractiveCard: React.FC<InteractiveCardProps> = ({ item, isSelected, onC
   );
 };
 
-// 3. Burst Button Component
 interface BurstButtonProps {
   children: React.ReactNode;
   onClick: () => void;
@@ -235,40 +236,21 @@ const BurstButton: React.FC<BurstButtonProps> = ({ children, onClick, className 
   );
 };
 
-// 4. Freshness Dot Badge for Steps
-const FreshnessDot = React.memo(() => (
-  <motion.span
-    animate={{
-      scale: [1, 1.4, 1],
-      opacity: [1, 0.4, 1]
-    }}
-    transition={{
-      duration: 1.8,
-      repeat: Infinity,
-      ease: "easeInOut"
-    }}
-    style={{
-      width: '8px',
-      height: '8px',
-      borderRadius: '50%',
-      backgroundColor: 'var(--color-sage)',
-      display: 'inline-block',
-      marginRight: '8px',
-      verticalAlign: 'middle'
-    }}
-  />
-));
-FreshnessDot.displayName = 'FreshnessDot';
+const initialCurrentItem: Omit<CartItem, 'id'> = {
+  orderType: 'bestseller',
+  bestseller: null,
+  base: null,
+  sweetener: null,
+  flavour: null,
+  additionals: [],
+  quantity: 1
+};
 
 export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
   const [step, setStep] = useState(1);
-  const [order, setOrder] = useState<OrderState>({
-    orderType: 'bestseller',
-    bestseller: null,
-    base: null,
-    sweetener: null,
-    flavour: null,
-    additionals: [],
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [currentItem, setCurrentItem] = useState<Omit<CartItem, 'id'>>(initialCurrentItem);
+  const [checkoutDetails, setCheckoutDetails] = useState<CheckoutDetails>({
     date: '',
     time: '',
     phone: '',
@@ -276,30 +258,39 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
     fullName: '',
     deliveryAddress: ''
   });
+  
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const [showProceedModal, setShowProceedModal] = useState(false);
+  const [quickAddBestseller, setQuickAddBestseller] = useState<MenuItem | null>(null);
+  const [quickAddExtras, setQuickAddExtras] = useState<MenuItem[]>([]);
+  const [quickAddQuantity, setQuickAddQuantity] = useState(1);
 
-  // Restore cart if returning from auth (Using localStorage to survive new tabs from Magic Links)
   useEffect(() => {
     const saved = localStorage.getItem('bbCartState');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setOrder(parsed.order);
-        setStep(parsed.step);
+        setCart(parsed.cart || []);
+        setCurrentItem(parsed.currentItem || initialCurrentItem);
+        setCheckoutDetails(parsed.checkoutDetails || {
+          date: '', time: '', phone: '', requests: '', fullName: '', deliveryAddress: ''
+        });
+        setStep(parsed.step || 1);
         localStorage.removeItem('bbCartState');
       } catch (e) {}
     }
   }, []);
 
-  // Auto-scroll on step change
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (!showProceedModal) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }, [step]);
 
   const toggleAdditional = (item: MenuItem) => {
-    setOrder(prev => {
+    setCurrentItem(prev => {
       const exists = prev.additionals.find(a => a.id === item.id);
       if (exists) {
         return { ...prev, additionals: prev.additionals.filter(a => a.id !== item.id) };
@@ -308,56 +299,70 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
     });
   };
 
-  const total = useMemo(() => {
+  const calculateItemPrice = (item: Omit<CartItem, 'id'> | CartItem) => {
     let sum = 0;
-    if (order.orderType === 'bestseller') {
-      if (order.bestseller) sum += order.bestseller.price;
-    } else {
-      if (order.base) sum += order.base.price;
-      if (order.sweetener) sum += order.sweetener.price;
-      if (order.flavour) sum += order.flavour.price;
+    if (item.orderType === 'bestseller' && item.bestseller) {
+      sum += item.bestseller.price;
+    } else if (item.orderType === 'custom') {
+      if (item.base) sum += item.base.price;
+      if (item.sweetener) sum += item.sweetener.price;
+      if (item.flavour) sum += item.flavour.price;
     }
-    order.additionals.forEach(a => sum += a.price);
-    return sum;
-  }, [order]);
+    item.additionals.forEach(a => sum += a.price);
+    return sum * item.quantity;
+  };
 
-  const itemCount = useMemo(() => {
-    let count = 0;
-    if (order.orderType === 'bestseller') {
-      if (order.bestseller) count++;
-    } else {
-      if (order.base) count++;
-      if (order.sweetener) count++;
-      if (order.flavour) count++;
+  const currentItemTotal = useMemo(() => calculateItemPrice(currentItem), [currentItem]);
+
+  const cartTotal = useMemo(() => {
+    return cart.reduce((total, item) => total + calculateItemPrice(item), 0);
+  }, [cart]);
+
+  const displayTotal = useMemo(() => {
+    return step === 3 ? cartTotal : cartTotal + currentItemTotal;
+  }, [step, cartTotal, currentItemTotal]);
+
+  const displayItemCount = useMemo(() => {
+    let count = cart.reduce((acc, item) => acc + item.quantity, 0);
+    if (step < 3) {
+      count += currentItem.quantity;
     }
-    count += order.additionals.length;
     return count;
-  }, [order]);
+  }, [cart, currentItem, step]);
 
   const handleNext = () => {
     if (step === 1) {
-      if (order.orderType === 'bestseller' && !order.bestseller) {
-        setErrors({ step1: "Please select a Signature Bestseller to continue." });
+      if (currentItem.orderType === 'bestseller') {
+        if (cart.length === 0) {
+          setErrors({ step1: "Please add at least one item to your cart before proceeding." });
+          return;
+        }
+        setErrors({});
+        setStep(3);
         return;
       }
-      if (order.orderType === 'custom' && (!order.base || !order.sweetener || !order.flavour)) {
+      if (currentItem.orderType === 'custom' && (!currentItem.base || !currentItem.sweetener || !currentItem.flavour)) {
         setErrors({ step1: "Please select a Base, Sweetener, and Flavour to continue." });
         return;
       }
       setErrors({});
       setStep(2);
     } else if (step === 2) {
-      setErrors({});
-      setStep(3);
+      setShowProceedModal(true);
     } else if (step === 3) {
       const newErrors: Record<string, string> = {};
       if (!session) {
-        if (!order.fullName) newErrors.fullName = "Please enter your name.";
-        if (!order.deliveryAddress) newErrors.deliveryAddress = "Please enter a delivery address.";
+        if (!checkoutDetails.fullName) newErrors.fullName = "Please enter your name.";
+        if (!checkoutDetails.deliveryAddress) newErrors.deliveryAddress = "Please enter a delivery address.";
       }
-      if (!order.date) newErrors.date = "Please pick a date for your celebration.";
-      if (!order.time) newErrors.time = "What time works best for you?";
-      if (!order.phone || order.phone.length < 10) newErrors.phone = "We need your phone number to confirm your order!";
+      if (!checkoutDetails.date) newErrors.date = "Please pick a date for your celebration.";
+      if (!checkoutDetails.time) newErrors.time = "What time works best for you?";
+      if (!checkoutDetails.phone || checkoutDetails.phone.length < 10) newErrors.phone = "We need your phone number to confirm your order!";
+      
+      if (cart.length === 0) {
+        newErrors.cart = "Your cart is empty. Please go back and add a cake.";
+      }
+
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
         return;
@@ -369,7 +374,50 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
 
   const handleBack = () => {
     setErrors({});
-    setStep(step - 1);
+    if (step === 3 && cart.length > 0) {
+      // Wait, if they go back from step 3, maybe we shouldn't force them to rebuild. 
+      // But we can go back to step 1 to let them add another.
+      setCurrentItem(initialCurrentItem);
+      setStep(1);
+    } else {
+      setStep(step - 1);
+    }
+  };
+
+  const addToCartAndProceed = (nextStep: number) => {
+    // Only add to cart if we have a valid cake built (we are coming from step 2)
+    if (currentItem.bestseller || (currentItem.base && currentItem.sweetener && currentItem.flavour)) {
+      setCart(prev => [...prev, { ...currentItem, id: Date.now().toString() }]);
+    }
+    
+    if (nextStep === 1) {
+      setCurrentItem(initialCurrentItem);
+    }
+    
+    setStep(nextStep);
+    setShowProceedModal(false);
+  };
+
+  const removeFromCart = (id: string) => {
+    setCart(prev => prev.filter(c => c.id !== id));
+  };
+
+  const handleAddBestsellerToCart = () => {
+    if (quickAddBestseller) {
+      setCart(prev => [...prev, {
+        id: Date.now().toString(),
+        orderType: 'bestseller',
+        bestseller: quickAddBestseller,
+        base: null,
+        sweetener: null,
+        flavour: null,
+        additionals: quickAddExtras,
+        quantity: quickAddQuantity
+      }]);
+      setQuickAddBestseller(null);
+      setQuickAddExtras([]);
+      setQuickAddQuantity(1);
+    }
   };
 
   /* ====== RECEIPT VIEW ====== */
@@ -387,43 +435,50 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
               <div className="receipt-divider"></div>
 
               <div className="receipt-items">
-                {order.orderType === 'bestseller' && order.bestseller && (
-                  <div className="receipt-line">
-                    <span>{order.bestseller.name}</span>
-                    <span className="receipt-dots"></span>
-                    <span>₹{order.bestseller.price}</span>
-                  </div>
-                )}
-                {order.orderType === 'custom' && (
-                  <>
-                    {order.base && (
+                {cart.map((item, idx) => (
+                  <div key={item.id} style={{ marginBottom: '16px' }}>
+                    <div className="font-serif" style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '8px' }}>
+                      Item {idx + 1} {item.quantity > 1 ? `(x${item.quantity})` : ''}
+                    </div>
+                    {item.orderType === 'bestseller' && item.bestseller && (
                       <div className="receipt-line">
-                        <span>Base: {order.base.name}</span>
+                        <span>{item.bestseller.name}</span>
                         <span className="receipt-dots"></span>
-                        <span>₹{order.base.price}</span>
+                        <span>₹{item.bestseller.price * item.quantity}</span>
                       </div>
                     )}
-                    {order.sweetener && (
-                      <div className="receipt-line">
-                        <span>Sweetener: {order.sweetener.name}</span>
-                        <span className="receipt-dots"></span>
-                        <span>₹{order.sweetener.price}</span>
-                      </div>
+                    {item.orderType === 'custom' && (
+                      <>
+                        {item.base && (
+                          <div className="receipt-line">
+                            <span>Base: {item.base.name}</span>
+                            <span className="receipt-dots"></span>
+                            <span>₹{item.base.price * item.quantity}</span>
+                          </div>
+                        )}
+                        {item.sweetener && (
+                          <div className="receipt-line">
+                            <span>Sweetener: {item.sweetener.name}</span>
+                            <span className="receipt-dots"></span>
+                            <span>₹{item.sweetener.price * item.quantity}</span>
+                          </div>
+                        )}
+                        {item.flavour && (
+                          <div className="receipt-line">
+                            <span>Flavour: {item.flavour.name}</span>
+                            <span className="receipt-dots"></span>
+                            <span>₹{item.flavour.price * item.quantity}</span>
+                          </div>
+                        )}
+                      </>
                     )}
-                    {order.flavour && (
-                      <div className="receipt-line">
-                        <span>Flavour: {order.flavour.name}</span>
+                    {item.additionals.map(a => (
+                      <div key={a.id} className="receipt-line receipt-line-add">
+                        <span>+ {a.name}</span>
                         <span className="receipt-dots"></span>
-                        <span>₹{order.flavour.price}</span>
+                        <span>₹{a.price * item.quantity}</span>
                       </div>
-                    )}
-                  </>
-                )}
-                {order.additionals.map(a => (
-                  <div key={a.id} className="receipt-line receipt-line-add">
-                    <span>+ {a.name}</span>
-                    <span className="receipt-dots"></span>
-                    <span>₹{a.price}</span>
+                    ))}
                   </div>
                 ))}
               </div>
@@ -432,16 +487,16 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
 
               <div className="receipt-total-row">
                 <span className="font-serif">Total</span>
-                <span className="receipt-total-amount font-serif">₹{total}</span>
+                <span className="receipt-total-amount font-serif">₹{cartTotal}</span>
               </div>
 
               <div className="receipt-divider"></div>
 
               <div className="receipt-details font-sans">
-                <p><strong>Date:</strong> {order.date}</p>
-                <p><strong>Time:</strong> {order.time}</p>
-                <p><strong>Phone:</strong> {order.phone}</p>
-                {order.requests && <p><strong>Notes:</strong> {order.requests}</p>}
+                <p><strong>Date:</strong> {checkoutDetails.date}</p>
+                <p><strong>Time:</strong> {checkoutDetails.time}</p>
+                <p><strong>Phone:</strong> {checkoutDetails.phone}</p>
+                {checkoutDetails.requests && <p><strong>Notes:</strong> {checkoutDetails.requests}</p>}
               </div>
 
               <p className="receipt-whatsapp font-sans">
@@ -461,6 +516,114 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
   /* ====== ORDER FORM ====== */
   return (
     <div className="order-page page-transition min-h-[100dvh]">
+      {/* Proceed Modal */}
+      <AnimatePresence>
+        {showProceedModal && (
+          <div className="modal-overlay">
+            <motion.div 
+              className="modal-content"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <h3 className="font-serif" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Cake Ready!</h3>
+              <p className="font-sans" style={{ marginBottom: '24px', color: 'var(--color-text-light)' }}>
+                Would you like to build another cake, or are you ready to checkout?
+              </p>
+              
+              <div className="modal-actions">
+                <button className="btn-secondary font-sans" onClick={() => addToCartAndProceed(1)}>
+                  Customize Another Cake
+                </button>
+                <BurstButton className="btn-primary font-sans" onClick={() => addToCartAndProceed(3)}>
+                  Proceed to Checkout
+                </BurstButton>
+              </div>
+              <div style={{ textAlign: 'center', marginTop: '16px' }}>
+                <button className="back-link font-sans" onClick={() => setShowProceedModal(false)}>
+                  Wait, let me edit this one
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Quick Add Bestseller Modal */}
+      <AnimatePresence>
+        {quickAddBestseller && (
+          <div className="modal-overlay">
+            <motion.div 
+              className="modal-content"
+              style={{ maxWidth: '600px', padding: '24px' }}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 className="font-serif" style={{ fontSize: '1.5rem', margin: 0 }}>{quickAddBestseller.name}</h3>
+                <span className="font-serif" style={{ fontSize: '1.2rem', color: 'var(--color-accent)' }}>
+                  ₹{(quickAddBestseller.price + quickAddExtras.reduce((s, a) => s + a.price, 0)) * quickAddQuantity}
+                </span>
+              </div>
+              
+              <div style={{ textAlign: 'left', marginBottom: '16px' }}>
+                <h4 className="font-sans" style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginBottom: '8px' }}>Add Extras (optional)</h4>
+                <div className="card-grid-2" style={{ maxHeight: '250px', overflowY: 'auto', padding: '4px' }}>
+                  {menuData.additionals.map((item, index) => {
+                    const sel = quickAddExtras.some(a => a.id === item.id);
+                    return (
+                      <InteractiveCard
+                        key={item.id}
+                        item={item}
+                        isSelected={sel}
+                        onClick={() => setQuickAddExtras(prev => sel ? prev.filter(a => a.id !== item.id) : [...prev, item])}
+                        icon={ICON_MAP[item.id]}
+                        index={index}
+                        pricePrefix="+"
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="quantity-section font-sans" style={{ background: 'var(--color-bg)', padding: '16px', borderRadius: '8px', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', textAlign: 'left' }}>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--color-text)' }}>Quantity</h4>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <button 
+                    className="btn-icon" 
+                    onClick={() => setQuickAddQuantity(prev => Math.max(1, prev - 1))}
+                    disabled={quickAddQuantity <= 1}
+                    style={{ padding: '8px', borderRadius: '50%', background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+                  >
+                    <Minus size={18} />
+                  </button>
+                  <span style={{ fontSize: '1.2rem', fontWeight: 600 }}>{quickAddQuantity}</span>
+                  <button 
+                    className="btn-icon" 
+                    onClick={() => setQuickAddQuantity(prev => prev + 1)}
+                    style={{ padding: '8px', borderRadius: '50%', background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+                  >
+                    <Plus size={18} />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="modal-actions">
+                <button className="btn-secondary font-sans" onClick={() => setQuickAddBestseller(null)}>
+                  Cancel
+                </button>
+                <BurstButton className="btn-primary font-sans" onClick={handleAddBestsellerToCart}>
+                  Add to Cart
+                </BurstButton>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <div className="order-header">
         <button className="back-link font-sans" onClick={() => onNavigate('home')}>
           <ArrowLeft size={18} />
@@ -469,9 +632,7 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
       </div>
 
       <div className="order-layout">
-        {/* Main Form Area */}
         <div className="order-main">
-          {/* Step Progress */}
           <div className="progress-bar">
             {[1, 2, 3].map(s => (
               <React.Fragment key={s}>
@@ -481,7 +642,7 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
                   </div>
                   <span className="progress-label font-sans">
                     {s === 1 && 'Cake Selection'}
-                    {s === 2 && 'Extras'}
+                    {s === 2 && 'Extras & Quantity'}
                     {s === 3 && 'Details'}
                   </span>
                 </div>
@@ -493,7 +654,7 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 'var(--space-xl)' }}>
             <h2 className="order-step-title font-serif" style={{ margin: 0, textAlign: 'center' }}>
               {step === 1 && "Choose Your Cake"}
-              {step === 2 && "Add Extras & Finishings"}
+              {step === 2 && "Add Extras & Adjust Quantity"}
               {step === 3 && "Final Details"}
             </h2>
           </div>
@@ -503,25 +664,29 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
               <span>{errors[`step${step}`]}</span>
             </div>
           )}
+          {errors.cart && (
+            <div className="order-error font-sans">
+              <span>{errors.cart}</span>
+            </div>
+          )}
 
           <div className="step-body" key={step}>
             {step === 1 && (
               <>
-                {/* Flow Selection Tabs */}
                 <div className="order-tabs font-sans">
                   <button 
-                    className={`order-tab ${order.orderType === 'bestseller' ? 'active' : ''}`}
+                    className={`order-tab ${currentItem.orderType === 'bestseller' ? 'active' : ''}`}
                     onClick={() => {
-                      setOrder(prev => ({ ...prev, orderType: 'bestseller', base: null, sweetener: null, flavour: null }));
+                      setCurrentItem(prev => ({ ...prev, orderType: 'bestseller', base: null, sweetener: null, flavour: null }));
                       setErrors({});
                     }}
                   >
                     Signature Bestsellers
                   </button>
                   <button 
-                    className={`order-tab ${order.orderType === 'custom' ? 'active' : ''}`}
+                    className={`order-tab ${currentItem.orderType === 'custom' ? 'active' : ''}`}
                     onClick={() => {
-                      setOrder(prev => ({ ...prev, orderType: 'custom', bestseller: null }));
+                      setCurrentItem(prev => ({ ...prev, orderType: 'custom', bestseller: null }));
                       setErrors({});
                     }}
                   >
@@ -530,7 +695,7 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
                 </div>
 
                 <AnimatePresence mode="wait">
-                  {order.orderType === 'bestseller' ? (
+                  {currentItem.orderType === 'bestseller' ? (
                     <motion.div 
                       className="bento-grid"
                       key="bestseller-grid"
@@ -539,17 +704,24 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.3 }}
                     >
-                      {menuData.bestsellers.map((item, index) => (
-                        <InteractiveCard
-                          key={item.id}
-                          item={item}
-                          isSelected={order.bestseller?.id === item.id}
-                          onClick={() => setOrder({ ...order, bestseller: item })}
-                          icon={<Award size={32} strokeWidth={1.5} />}
-                          isBento={true}
-                          index={index}
-                        />
-                      ))}
+                      {menuData.bestsellers.map((item, index) => {
+                        const isInCart = cart.some(c => c.orderType === 'bestseller' && c.bestseller?.id === item.id);
+                        return (
+                          <InteractiveCard
+                            key={item.id}
+                            item={item}
+                            isSelected={isInCart}
+                            onClick={() => {
+                              setQuickAddBestseller(item);
+                              setQuickAddExtras([]);
+                              setQuickAddQuantity(1);
+                            }}
+                            icon={<Award size={32} strokeWidth={1.5} />}
+                            isBento={true}
+                            index={index}
+                          />
+                        );
+                      })}
                     </motion.div>
                   ) : (
                     <motion.div 
@@ -560,7 +732,6 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.3 }}
                     >
-                      {/* Section 1: Choose a Base (Zig-Zag) */}
                       <div className="zigzag-section">
                         <div className="zigzag-info">
                           <h3 className="section-label font-serif">1. Choose a Base</h3>
@@ -571,8 +742,8 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
                             <InteractiveCard
                               key={item.id}
                               item={item}
-                              isSelected={order.base?.id === item.id}
-                              onClick={() => setOrder({ ...order, base: item })}
+                              isSelected={currentItem.base?.id === item.id}
+                              onClick={() => setCurrentItem({ ...currentItem, base: item })}
                               icon={ICON_MAP[item.id]}
                               index={index}
                             />
@@ -580,7 +751,6 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
                         </div>
                       </div>
 
-                      {/* Section 2: Choose a Sweetener (Zig-Zag Reversed) */}
                       <div className="zigzag-section">
                         <div className="zigzag-info">
                           <h3 className="section-label font-serif">2. Choose a Sweetener</h3>
@@ -591,8 +761,8 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
                             <InteractiveCard
                               key={item.id}
                               item={item}
-                              isSelected={order.sweetener?.id === item.id}
-                              onClick={() => setOrder({ ...order, sweetener: item })}
+                              isSelected={currentItem.sweetener?.id === item.id}
+                              onClick={() => setCurrentItem({ ...currentItem, sweetener: item })}
                               icon={ICON_MAP[item.id]}
                               index={index}
                             />
@@ -600,7 +770,6 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
                         </div>
                       </div>
 
-                      {/* Section 3: Pick a Flavour (Zig-Zag) */}
                       <div className="zigzag-section">
                         <div className="zigzag-info">
                           <h3 className="section-label font-serif">3. Pick a Flavour</h3>
@@ -611,8 +780,8 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
                             <InteractiveCard
                               key={item.id}
                               item={item}
-                              isSelected={order.flavour?.id === item.id}
-                              onClick={() => setOrder({ ...order, flavour: item })}
+                              isSelected={currentItem.flavour?.id === item.id}
+                              onClick={() => setCurrentItem({ ...currentItem, flavour: item })}
                               icon={ICON_MAP[item.id]}
                               index={index}
                             />
@@ -634,9 +803,9 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
                   key="step2-content"
                 >
                   <h3 className="section-label font-serif">Add Extras <span className="label-optional font-sans">(optional, multi-select)</span></h3>
-                  <div className="card-grid-2">
+                  <div className="card-grid-2" style={{ marginBottom: '2rem' }}>
                     {menuData.additionals.map((item, index) => {
-                      const sel = order.additionals.some(a => a.id === item.id);
+                      const sel = currentItem.additionals.some(a => a.id === item.id);
                       return (
                         <InteractiveCard
                           key={item.id}
@@ -649,6 +818,31 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
                         />
                       );
                     })}
+                  </div>
+
+                  <div className="quantity-section font-sans" style={{ background: 'var(--color-surface)', padding: '24px', borderRadius: '12px', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--color-text)' }}>Quantity</h4>
+                      <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-text-light)' }}>How many of this exact cake do you want?</p>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <button 
+                        className="btn-icon" 
+                        onClick={() => setCurrentItem(prev => ({ ...prev, quantity: Math.max(1, prev.quantity - 1) }))}
+                        disabled={currentItem.quantity <= 1}
+                        style={{ padding: '8px', borderRadius: '50%', background: 'var(--color-background)', border: '1px solid var(--color-border)' }}
+                      >
+                        <Minus size={18} />
+                      </button>
+                      <span style={{ fontSize: '1.2rem', fontWeight: 600 }}>{currentItem.quantity}</span>
+                      <button 
+                        className="btn-icon" 
+                        onClick={() => setCurrentItem(prev => ({ ...prev, quantity: prev.quantity + 1 }))}
+                        style={{ padding: '8px', borderRadius: '50%', background: 'var(--color-background)', border: '1px solid var(--color-border)' }}
+                      >
+                        <Plus size={18} />
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               </AnimatePresence>
@@ -667,7 +861,7 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
                     <div className="guest-banner font-sans" style={{ background: 'var(--color-surface)', padding: '16px', borderRadius: '8px', marginBottom: '24px', border: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
                       <span>Returning customer?</span>
                       <button className="btn-secondary" onClick={() => {
-                        localStorage.setItem('bbCartState', JSON.stringify({ order, step: 3 }));
+                        localStorage.setItem('bbCartState', JSON.stringify({ cart, currentItem, checkoutDetails, step: 3 }));
                         onNavigate('auth');
                       }} style={{ padding: '8px 16px', fontSize: '0.9rem' }}>Sign in for faster checkout</button>
                     </div>
@@ -677,12 +871,12 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
                     <>
                       <div className="form-field">
                         <label>Full Name <span className="required">*</span></label>
-                        <input type="text" value={order.fullName} onChange={e => setOrder({ ...order, fullName: e.target.value })} />
+                        <input type="text" value={checkoutDetails.fullName} onChange={e => setCheckoutDetails({ ...checkoutDetails, fullName: e.target.value })} />
                         {errors.fullName && <span className="field-error">{errors.fullName}</span>}
                       </div>
                       <div className="form-field">
                         <label>Delivery Address <span className="required">*</span></label>
-                        <textarea rows={2} value={order.deliveryAddress} onChange={e => setOrder({ ...order, deliveryAddress: e.target.value })}></textarea>
+                        <textarea rows={2} value={checkoutDetails.deliveryAddress} onChange={e => setCheckoutDetails({ ...checkoutDetails, deliveryAddress: e.target.value })}></textarea>
                         {errors.deliveryAddress && <span className="field-error">{errors.deliveryAddress}</span>}
                       </div>
                     </>
@@ -691,12 +885,12 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
                   <div className="form-row">
                     <div className="form-field">
                       <label>Pickup/Delivery Date <span className="required">*</span></label>
-                      <input type="date" value={order.date} onChange={e => setOrder({ ...order, date: e.target.value })} />
+                      <input type="date" value={checkoutDetails.date} onChange={e => setCheckoutDetails({ ...checkoutDetails, date: e.target.value })} />
                       {errors.date && <span className="field-error">{errors.date}</span>}
                     </div>
                     <div className="form-field">
                       <label>Preferred Time <span className="required">*</span></label>
-                      <input type="time" value={order.time} onChange={e => setOrder({ ...order, time: e.target.value })} />
+                      <input type="time" value={checkoutDetails.time} onChange={e => setCheckoutDetails({ ...checkoutDetails, time: e.target.value })} />
                       {errors.time && <span className="field-error">{errors.time}</span>}
                     </div>
                   </div>
@@ -706,8 +900,8 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
                     <input
                       type="tel"
                       placeholder="e.g. 9876543210"
-                      value={order.phone}
-                      onChange={e => setOrder({ ...order, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                      value={checkoutDetails.phone}
+                      onChange={e => setCheckoutDetails({ ...checkoutDetails, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                     />
                     {errors.phone && <span className="field-error">{errors.phone}</span>}
                   </div>
@@ -717,8 +911,8 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
                     <textarea
                       rows={3}
                       placeholder="Any message, allergy info, or decorations..."
-                      value={order.requests}
-                      onChange={e => setOrder({ ...order, requests: e.target.value })}
+                      value={checkoutDetails.requests}
+                      onChange={e => setCheckoutDetails({ ...checkoutDetails, requests: e.target.value })}
                     ></textarea>
                   </div>
 
@@ -733,38 +927,47 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
           <div className="step-nav">
             {step > 1 && (
               <button className="btn-secondary font-sans" onClick={handleBack}>
-                Back
+                {step === 3 ? 'Add another cake' : 'Back'}
               </button>
             )}
             <BurstButton className="btn-primary ml-auto font-sans" onClick={handleNext}>
-              {step === 3 ? 'Place Order' : 'Continue'}
+              {step === 1 ? (currentItem.orderType === 'bestseller' ? 'Proceed to Checkout' : 'Continue') : step === 2 ? 'Proceed' : 'Place Order'}
               {step < 3 && <ChevronRight size={18} style={{ marginLeft: '4px' }} />}
             </BurstButton>
           </div>
         </div>
 
-        {/* Desktop Sidebar */}
         <aside className="order-sidebar">
-          <OrderSummaryContent order={order} total={total} />
+          <OrderSummaryContent 
+            cart={cart} 
+            currentItem={currentItem} 
+            step={step} 
+            total={displayTotal} 
+            onRemove={removeFromCart} 
+          />
         </aside>
       </div>
 
-      {/* Mobile Bottom Bar */}
       <div className="mobile-bar" onClick={() => setMobileSheetOpen(!mobileSheetOpen)}>
         <div className="mobile-bar-info">
           <ShoppingBag size={18} />
-          <span className="font-sans">{itemCount} item{itemCount !== 1 ? 's' : ''}</span>
+          <span className="font-sans">{displayItemCount} item{displayItemCount !== 1 ? 's' : ''}</span>
         </div>
-        <span className="mobile-bar-total font-serif">₹{total}</span>
+        <span className="mobile-bar-total font-serif">₹{displayTotal}</span>
       </div>
 
-      {/* Mobile Bottom Sheet */}
       {mobileSheetOpen && (
         <>
           <div className="sheet-overlay" onClick={() => setMobileSheetOpen(false)}></div>
           <div className="mobile-sheet">
             <div className="sheet-handle" onClick={() => setMobileSheetOpen(false)}></div>
-            <OrderSummaryContent order={order} total={total} />
+            <OrderSummaryContent 
+              cart={cart} 
+              currentItem={currentItem} 
+              step={step} 
+              total={displayTotal} 
+              onRemove={removeFromCart} 
+            />
           </div>
         </>
       )}
@@ -772,8 +975,13 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
   );
 };
 
-/* Extracted summary content for reuse */
-const OrderSummaryContent: React.FC<{ order: OrderState; total: number }> = ({ order, total }) => (
+const OrderSummaryContent: React.FC<{ 
+  cart: CartItem[]; 
+  currentItem: Omit<CartItem, 'id'>; 
+  step: number; 
+  total: number;
+  onRemove: (id: string) => void;
+}> = ({ cart, currentItem, step, total, onRemove }) => (
   <>
     <h3 className="sidebar-title font-serif">Your Order</h3>
     <div className="sidebar-tags">
@@ -781,49 +989,100 @@ const OrderSummaryContent: React.FC<{ order: OrderState; total: number }> = ({ o
       <span className="sidebar-tag font-sans">✓ Prices inclusive of taxes</span>
     </div>
 
-    <div className="sidebar-items font-sans">
-      {order.orderType === 'bestseller' ? (
-        order.bestseller ? (
-          <div className="sidebar-item">
-            <span>{order.bestseller.name}</span>
-            <span>₹{order.bestseller.price}</span>
+    <div className="sidebar-items font-sans" style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto' }}>
+      
+      {/* Show existing cart items */}
+      {cart.map((item, idx) => (
+        <div key={item.id} className="sidebar-cart-item">
+          <div className="sidebar-cart-item-header">
+            <strong>Item {idx + 1}</strong> (Qty: {item.quantity})
+            <button className="btn-icon remove-btn" onClick={() => onRemove(item.id)} title="Remove item">
+              <Trash2 size={16} />
+            </button>
           </div>
-        ) : (
-          <div className="sidebar-item sidebar-item-empty">Select a signature cake...</div>
-        )
-      ) : (
-        <>
-          {order.base ? (
+          {item.orderType === 'bestseller' ? (
             <div className="sidebar-item">
-              <span>{order.base.name}</span>
-              <span>₹{order.base.price}</span>
+              <span>{item.bestseller?.name}</span>
             </div>
           ) : (
-            <div className="sidebar-item sidebar-item-empty">Select a base...</div>
+            <>
+              <div className="sidebar-item"><span>{item.base?.name || 'Custom Base'}</span></div>
+              {item.sweetener && <div className="sidebar-item"><span>{item.sweetener.name}</span></div>}
+              {item.flavour && <div className="sidebar-item"><span>{item.flavour.name}</span></div>}
+            </>
           )}
-
-          {order.sweetener && (
-            <div className="sidebar-item">
-              <span>{order.sweetener.name}</span>
-              <span>₹{order.sweetener.price}</span>
+          {item.additionals.map(a => (
+            <div key={a.id} className="sidebar-item sidebar-item-add">
+              <span>+ {a.name}</span>
             </div>
-          )}
-
-          {order.flavour && (
-            <div className="sidebar-item">
-              <span>{order.flavour.name}</span>
-              <span>₹{order.flavour.price}</span>
-            </div>
-          )}
-        </>
-      )}
-
-      {order.additionals.map(a => (
-        <div key={a.id} className="sidebar-item sidebar-item-add">
-          <span>+ {a.name}</span>
-          <span>₹{a.price}</span>
+          ))}
+          <div className="sidebar-item" style={{ borderTop: '1px dashed var(--color-border)', marginTop: '4px', paddingTop: '4px' }}>
+            <span>Subtotal</span>
+            <span>₹{(
+              (item.orderType === 'bestseller' ? (item.bestseller?.price || 0) : ((item.base?.price || 0) + (item.sweetener?.price || 0) + (item.flavour?.price || 0))) 
+              + item.additionals.reduce((sum, a) => sum + a.price, 0)
+            ) * item.quantity}</span>
+          </div>
         </div>
       ))}
+
+      {/* Show item currently being built if we are in step 1 or 2 */}
+      {step < 3 && currentItem.orderType === 'custom' && (
+        <div className="sidebar-cart-item current-building">
+          <div className="sidebar-cart-item-header" style={{ color: 'var(--color-accent)' }}>
+            <strong>Building New Item</strong> (Qty: {currentItem.quantity})
+          </div>
+          {currentItem.orderType === 'bestseller' ? (
+            currentItem.bestseller ? (
+              <div className="sidebar-item">
+                <span>{currentItem.bestseller.name}</span>
+                <span>₹{currentItem.bestseller.price}</span>
+              </div>
+            ) : (
+              <div className="sidebar-item sidebar-item-empty">Select a signature cake...</div>
+            )
+          ) : (
+            <>
+              {currentItem.base ? (
+                <div className="sidebar-item">
+                  <span>{currentItem.base.name}</span>
+                  <span>₹{currentItem.base.price}</span>
+                </div>
+              ) : (
+                <div className="sidebar-item sidebar-item-empty">Select a base...</div>
+              )}
+
+              {currentItem.sweetener && (
+                <div className="sidebar-item">
+                  <span>{currentItem.sweetener.name}</span>
+                  <span>₹{currentItem.sweetener.price}</span>
+                </div>
+              )}
+
+              {currentItem.flavour && (
+                <div className="sidebar-item">
+                  <span>{currentItem.flavour.name}</span>
+                  <span>₹{currentItem.flavour.price}</span>
+                </div>
+              )}
+            </>
+          )}
+
+          {currentItem.additionals.map(a => (
+            <div key={a.id} className="sidebar-item sidebar-item-add">
+              <span>+ {a.name}</span>
+              <span>₹{a.price}</span>
+            </div>
+          ))}
+          <div className="sidebar-item" style={{ borderTop: '1px dashed var(--color-border)', marginTop: '4px', paddingTop: '4px' }}>
+            <span>Subtotal</span>
+            <span>₹{(
+              (currentItem.orderType === 'bestseller' ? (currentItem.bestseller?.price || 0) : ((currentItem.base?.price || 0) + (currentItem.sweetener?.price || 0) + (currentItem.flavour?.price || 0))) 
+              + currentItem.additionals.reduce((sum, a) => sum + a.price, 0)
+            ) * currentItem.quantity}</span>
+          </div>
+        </div>
+      )}
     </div>
 
     <div className="sidebar-total">

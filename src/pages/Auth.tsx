@@ -184,8 +184,8 @@ export const Auth: React.FC<AuthProps> = ({ onNavigate, session }) => {
                   required
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
-                  placeholder="12345678"
-                  maxLength={8}
+                  placeholder="123456"
+                  maxLength={6}
                   style={{ letterSpacing: '0.5em', textAlign: 'center', fontSize: '1.2rem' }}
                 />
               </div>
