@@ -266,6 +266,7 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
   const [quickAddBestseller, setQuickAddBestseller] = useState<MenuItem | null>(null);
   const [quickAddExtras, setQuickAddExtras] = useState<MenuItem[]>([]);
   const [quickAddQuantity, setQuickAddQuantity] = useState(1);
+  const [paymentReady, setPaymentReady] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('bbCartState');
@@ -351,26 +352,49 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
       setShowProceedModal(true);
     } else if (step === 3) {
       const newErrors: Record<string, string> = {};
-      if (!session) {
-        if (!checkoutDetails.fullName) newErrors.fullName = "Please enter your name.";
-        if (!checkoutDetails.deliveryAddress) newErrors.deliveryAddress = "Please enter a delivery address.";
-      }
-      if (!checkoutDetails.date) newErrors.date = "Please pick a date for your celebration.";
-      if (!checkoutDetails.time) newErrors.time = "What time works best for you?";
-      if (!checkoutDetails.phone || checkoutDetails.phone.length < 10) newErrors.phone = "We need your phone number to confirm your order!";
-      
-      if (cart.length === 0) {
-        newErrors.cart = "Your cart is empty. Please go back and add a cake.";
-      }
+      if (!checkoutDetails.fullName.trim()) newErrors.fullName = "Name is required";
+      if (!checkoutDetails.deliveryAddress.trim()) newErrors.deliveryAddress = "Address is required";
+      if (!checkoutDetails.date) newErrors.date = "Date is required";
+      if (!checkoutDetails.time) newErrors.time = "Time is required";
+      if (checkoutDetails.phone.length < 10) newErrors.phone = "Valid 10-digit phone number required";
 
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
         return;
       }
       setErrors({});
-      setIsSubmitted(true);
+      setPaymentReady(true);
     }
   };
+
+  useEffect(() => {
+    if (paymentReady) {
+      // Dynamically load UroPay script when payment is ready
+      const script = document.createElement('script');
+      script.src = 'https://cdn.uropay.me/uropay-embed.min.js';
+      script.async = true;
+      document.body.appendChild(script);
+
+      // Listener for potential success events from iframe or window
+      const handleMessage = (e: MessageEvent) => {
+        try {
+          if (e.data && (e.data.status === 'success' || e.data.type === 'payment_success')) {
+            setIsSubmitted(true);
+            setCart([]);
+            localStorage.removeItem('bbCartState');
+          }
+        } catch (err) {}
+      };
+      window.addEventListener('message', handleMessage);
+
+      return () => {
+        window.removeEventListener('message', handleMessage);
+        if (document.body.contains(script)) {
+          document.body.removeChild(script);
+        }
+      };
+    }
+  }, [paymentReady]);
 
   const handleBack = () => {
     setErrors({});
@@ -857,83 +881,143 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, session }) => {
                   exit={{ opacity: 0 }}
                   key="step3-content"
                 >
-                  {!session && (
-                    <div className="guest-banner font-sans" style={{ background: 'var(--color-surface)', padding: '16px', borderRadius: '8px', marginBottom: '24px', border: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-                      <span>Returning customer?</span>
-                      <button className="btn-secondary" onClick={() => {
-                        localStorage.setItem('bbCartState', JSON.stringify({ cart, currentItem, checkoutDetails, step: 3 }));
-                        onNavigate('auth');
-                      }} style={{ padding: '8px 16px', fontSize: '0.9rem' }}>Sign in for faster checkout</button>
-                    </div>
-                  )}
-
-                  {!session && (
+                  {!paymentReady ? (
                     <>
-                      <div className="form-field">
-                        <label>Full Name <span className="required">*</span></label>
-                        <input type="text" value={checkoutDetails.fullName} onChange={e => setCheckoutDetails({ ...checkoutDetails, fullName: e.target.value })} />
-                        {errors.fullName && <span className="field-error">{errors.fullName}</span>}
+                      {!session && (
+                        <div className="guest-banner font-sans" style={{ background: 'var(--color-surface)', padding: '16px', borderRadius: '8px', marginBottom: '24px', border: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                          <span>Returning customer?</span>
+                          <button className="btn-secondary" onClick={() => {
+                            localStorage.setItem('bbCartState', JSON.stringify({ cart, currentItem, checkoutDetails, step: 3 }));
+                            onNavigate('auth');
+                          }} style={{ padding: '8px 16px', fontSize: '0.9rem' }}>Sign in for faster checkout</button>
+                        </div>
+                      )}
+
+                      {!session && (
+                        <>
+                          <div className="form-field">
+                            <label>Full Name <span className="required">*</span></label>
+                            <input type="text" value={checkoutDetails.fullName} onChange={e => setCheckoutDetails({ ...checkoutDetails, fullName: e.target.value })} />
+                            {errors.fullName && <span className="field-error">{errors.fullName}</span>}
+                          </div>
+                          <div className="form-field">
+                            <label>Delivery Address <span className="required">*</span></label>
+                            <textarea rows={2} value={checkoutDetails.deliveryAddress} onChange={e => setCheckoutDetails({ ...checkoutDetails, deliveryAddress: e.target.value })}></textarea>
+                            {errors.deliveryAddress && <span className="field-error">{errors.deliveryAddress}</span>}
+                          </div>
+                        </>
+                      )}
+
+                      <div className="form-row">
+                        <div className="form-field">
+                          <label>Pickup/Delivery Date <span className="required">*</span></label>
+                          <input type="date" value={checkoutDetails.date} onChange={e => setCheckoutDetails({ ...checkoutDetails, date: e.target.value })} />
+                          {errors.date && <span className="field-error">{errors.date}</span>}
+                        </div>
+                        <div className="form-field">
+                          <label>Preferred Time <span className="required">*</span></label>
+                          <input type="time" value={checkoutDetails.time} onChange={e => setCheckoutDetails({ ...checkoutDetails, time: e.target.value })} />
+                          {errors.time && <span className="field-error">{errors.time}</span>}
+                        </div>
                       </div>
+
                       <div className="form-field">
-                        <label>Delivery Address <span className="required">*</span></label>
-                        <textarea rows={2} value={checkoutDetails.deliveryAddress} onChange={e => setCheckoutDetails({ ...checkoutDetails, deliveryAddress: e.target.value })}></textarea>
-                        {errors.deliveryAddress && <span className="field-error">{errors.deliveryAddress}</span>}
+                        <label>Phone Number <span className="required">*</span></label>
+                        <input
+                          type="tel"
+                          placeholder="e.g. 9876543210"
+                          value={checkoutDetails.phone}
+                          onChange={e => setCheckoutDetails({ ...checkoutDetails, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                        />
+                        {errors.phone && <span className="field-error">{errors.phone}</span>}
+                      </div>
+
+                      <div className="form-field">
+                        <label>Special Requests</label>
+                        <textarea
+                          rows={3}
+                          placeholder="Any message, allergy info, or decorations..."
+                          value={checkoutDetails.requests}
+                          onChange={e => setCheckoutDetails({ ...checkoutDetails, requests: e.target.value })}
+                        ></textarea>
+                      </div>
+
+                      <div className="form-note">
+                        <p>You will receive an order confirmation via <strong>WhatsApp</strong>.</p>
                       </div>
                     </>
+                  ) : (
+                    <div className="payment-ready-section" style={{ textAlign: 'center', padding: '32px 16px', background: 'var(--color-surface)', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
+                      <h3 className="font-serif" style={{ fontSize: '1.8rem', marginBottom: '16px' }}>Ready to Pay</h3>
+                      <p className="font-sans" style={{ color: 'var(--color-text-muted)', marginBottom: '32px' }}>
+                        Your total is <strong>₹{displayTotal}</strong>. Please complete your payment using UPI below.
+                      </p>
+                      
+                      {/* UroPay Native Button */}
+                      <div style={{ marginBottom: '24px' }}>
+                        <a 
+                          href="#" 
+                          className="uropay-btn" 
+                          data-uropay-api-key={import.meta.env.VITE_UROPAY_API_KEY} 
+                          data-uropay-button-id={import.meta.env.VITE_UROPAY_BUTTON_ID} 
+                          data-uropay-environment={import.meta.env.VITE_UROPAY_ENV || 'TEST'} 
+                          data-uropay-amount={displayTotal}
+                          style={{
+                            display: 'inline-block',
+                            background: 'var(--color-text)',
+                            color: '#fff',
+                            padding: '16px 32px',
+                            borderRadius: '30px',
+                            textDecoration: 'none',
+                            fontWeight: 600,
+                            fontSize: '1.1rem'
+                          }}
+                        >
+                          Pay ₹{displayTotal} with UPI
+                        </a>
+                      </div>
+
+                      {/* Manual Fallback just in case script fails to callback */}
+                      <div style={{ borderTop: '1px dashed var(--color-border)', paddingTop: '24px', marginTop: '24px' }}>
+                        <p className="font-sans" style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '12px' }}>
+                          Already paid but screen didn't update?
+                        </p>
+                        <button 
+                          className="btn-secondary font-sans" 
+                          onClick={() => {
+                            setIsSubmitted(true);
+                            setCart([]);
+                            localStorage.removeItem('bbCartState');
+                          }}
+                          style={{ fontSize: '0.9rem' }}
+                        >
+                          I have completed the payment
+                        </button>
+                      </div>
+                    </div>
                   )}
-
-                  <div className="form-row">
-                    <div className="form-field">
-                      <label>Pickup/Delivery Date <span className="required">*</span></label>
-                      <input type="date" value={checkoutDetails.date} onChange={e => setCheckoutDetails({ ...checkoutDetails, date: e.target.value })} />
-                      {errors.date && <span className="field-error">{errors.date}</span>}
-                    </div>
-                    <div className="form-field">
-                      <label>Preferred Time <span className="required">*</span></label>
-                      <input type="time" value={checkoutDetails.time} onChange={e => setCheckoutDetails({ ...checkoutDetails, time: e.target.value })} />
-                      {errors.time && <span className="field-error">{errors.time}</span>}
-                    </div>
-                  </div>
-
-                  <div className="form-field">
-                    <label>Phone Number <span className="required">*</span></label>
-                    <input
-                      type="tel"
-                      placeholder="e.g. 9876543210"
-                      value={checkoutDetails.phone}
-                      onChange={e => setCheckoutDetails({ ...checkoutDetails, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                    />
-                    {errors.phone && <span className="field-error">{errors.phone}</span>}
-                  </div>
-
-                  <div className="form-field">
-                    <label>Special Requests</label>
-                    <textarea
-                      rows={3}
-                      placeholder="Any message, allergy info, or decorations..."
-                      value={checkoutDetails.requests}
-                      onChange={e => setCheckoutDetails({ ...checkoutDetails, requests: e.target.value })}
-                    ></textarea>
-                  </div>
-
-                  <div className="form-note">
-                    <p>You will receive an order confirmation via <strong>WhatsApp</strong>.</p>
-                  </div>
                 </motion.div>
               </AnimatePresence>
             )}
           </div>
 
           <div className="step-nav">
-            {step > 1 && (
+            {step > 1 && !paymentReady && (
               <button className="btn-secondary font-sans" onClick={handleBack}>
                 {step === 3 ? 'Add another cake' : 'Back'}
               </button>
             )}
-            <BurstButton className="btn-primary ml-auto font-sans" onClick={handleNext}>
-              {step === 1 ? (currentItem.orderType === 'bestseller' ? 'Proceed to Checkout' : 'Continue') : step === 2 ? 'Proceed' : 'Place Order'}
-              {step < 3 && <ChevronRight size={18} style={{ marginLeft: '4px' }} />}
-            </BurstButton>
+            {paymentReady && (
+              <button className="btn-secondary font-sans" onClick={() => setPaymentReady(false)}>
+                Edit Details
+              </button>
+            )}
+            {!paymentReady && (
+              <BurstButton className="btn-primary ml-auto font-sans" onClick={handleNext}>
+                {step === 1 ? (currentItem.orderType === 'bestseller' ? 'Proceed to Checkout' : 'Continue') : step === 2 ? 'Proceed' : 'Proceed to Payment'}
+                {step < 3 && <ChevronRight size={18} style={{ marginLeft: '4px' }} />}
+              </BurstButton>
+            )}
           </div>
         </div>
 
