@@ -1032,41 +1032,31 @@ const OrderSummaryContent: React.FC<{
           <div className="sidebar-cart-item-header" style={{ color: 'var(--color-accent)' }}>
             <strong>Building New Item</strong> (Qty: {currentItem.quantity})
           </div>
-          {currentItem.orderType === 'bestseller' ? (
-            currentItem.bestseller ? (
+          
+          <>
+            {currentItem.base ? (
               <div className="sidebar-item">
-                <span>{currentItem.bestseller.name}</span>
-                <span>₹{currentItem.bestseller.price}</span>
+                <span>{currentItem.base.name}</span>
+                <span>₹{currentItem.base.price}</span>
               </div>
             ) : (
-              <div className="sidebar-item sidebar-item-empty">Select a signature cake...</div>
-            )
-          ) : (
-            <>
-              {currentItem.base ? (
-                <div className="sidebar-item">
-                  <span>{currentItem.base.name}</span>
-                  <span>₹{currentItem.base.price}</span>
-                </div>
-              ) : (
-                <div className="sidebar-item sidebar-item-empty">Select a base...</div>
-              )}
+              <div className="sidebar-item sidebar-item-empty">Select a base...</div>
+            )}
 
-              {currentItem.sweetener && (
-                <div className="sidebar-item">
-                  <span>{currentItem.sweetener.name}</span>
-                  <span>₹{currentItem.sweetener.price}</span>
-                </div>
-              )}
+            {currentItem.sweetener && (
+              <div className="sidebar-item">
+                <span>{currentItem.sweetener.name}</span>
+                <span>₹{currentItem.sweetener.price}</span>
+              </div>
+            )}
 
-              {currentItem.flavour && (
-                <div className="sidebar-item">
-                  <span>{currentItem.flavour.name}</span>
-                  <span>₹{currentItem.flavour.price}</span>
-                </div>
-              )}
-            </>
-          )}
+            {currentItem.flavour && (
+              <div className="sidebar-item">
+                <span>{currentItem.flavour.name}</span>
+                <span>₹{currentItem.flavour.price}</span>
+              </div>
+            )}
+          </>
 
           {currentItem.additionals.map(a => (
             <div key={a.id} className="sidebar-item sidebar-item-add">
@@ -1077,7 +1067,7 @@ const OrderSummaryContent: React.FC<{
           <div className="sidebar-item" style={{ borderTop: '1px dashed var(--color-border)', marginTop: '4px', paddingTop: '4px' }}>
             <span>Subtotal</span>
             <span>₹{(
-              (currentItem.orderType === 'bestseller' ? (currentItem.bestseller?.price || 0) : ((currentItem.base?.price || 0) + (currentItem.sweetener?.price || 0) + (currentItem.flavour?.price || 0))) 
+              ((currentItem.base?.price || 0) + (currentItem.sweetener?.price || 0) + (currentItem.flavour?.price || 0)) 
               + currentItem.additionals.reduce((sum, a) => sum + a.price, 0)
             ) * currentItem.quantity}</span>
           </div>
