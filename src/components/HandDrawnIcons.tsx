@@ -1,4 +1,3 @@
-import React from 'react';
 
 export const HandDrawnHeart = ({ size = 24, strokeWidth = 1.5 }) => (
   <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ overflow: 'visible' }}>

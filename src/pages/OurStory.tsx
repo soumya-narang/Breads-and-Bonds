@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Page } from '../App';
-import { ArrowLeft, ChefHat } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { HandDrawnFrame } from '../components/HandDrawnIcons';
 import './Pages.css';
 
