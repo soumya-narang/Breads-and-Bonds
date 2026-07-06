@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Page } from '../App';
 import { ArrowLeft, ChefHat } from 'lucide-react';
+import { HandDrawnFrame } from '../components/HandDrawnIcons';
 import './Pages.css';
 
 interface Props {
@@ -26,10 +27,10 @@ export const OurStory: React.FC<Props> = ({ onGoBack }) => {
         </header>
 
         <div className="story-layout">
-          <div className="baker-portrait texture-wood">
-            <div className="portrait-inner">
-              <span className="portrait-icon"><ChefHat size={48} strokeWidth={1.5} color="#ece2ce" /></span>
-              <p className="portrait-caption text-serif">The Baker</p>
+          <div className="story-collage-wrapper">
+            <img src={`${import.meta.env.BASE_URL}cakes-collage.jpg`} alt="Our handmade cakes" className="story-collage" />
+            <div className="collage-frame-overlay">
+              <HandDrawnFrame strokeWidth={3} />
             </div>
           </div>
 

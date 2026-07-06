@@ -50,30 +50,45 @@
   }
 }
 
-.baker-portrait {
+.story-collage-wrapper {
   flex-shrink: 0;
   width: 100%;
-  max-width: 320px;
-  height: 440px;
-  background: var(--color-bg);
-  border-radius: var(--radius-md);
+  max-width: 400px;
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-sm);
+  position: relative;
 }
 
-.portrait-inner {
-  text-align: center;
-  color: var(--color-text-muted);
+.story-collage {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  border: 10px solid var(--color-surface);
+  filter: sepia(10%) contrast(1.02) saturate(1.1);
+  object-fit: cover;
+  transition: transform 0.4s ease, filter 0.4s ease;
 }
 
-.portrait-icon {
-  font-size: 3rem;
-  margin-bottom: var(--space-sm);
-  opacity: 0.3;
+.story-collage:hover {
+  transform: scale(1.02) rotate(-1deg);
+  filter: sepia(0%) contrast(1.05) saturate(1.15);
+}
+
+.collage-frame-overlay {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
+  pointer-events: none;
+  color: var(--color-accent);
+  opacity: 0.8;
+  z-index: 10;
+  transition: opacity 0.4s ease;
+}
+
+.story-collage-wrapper:hover .collage-frame-overlay {
+  opacity: 1;
 }
 
 .story-text {
