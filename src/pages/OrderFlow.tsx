@@ -488,7 +488,7 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, onGoBack, session }) =>
         name: 'Breads & Bonds',
         description: 'Order Payment',
         order_id: data.id,
-        handler: function (response: any) {
+        handler: function () {
           // Success Callback
           setReceiptCart([...cart]);
           setReceiptTotal(displayTotal);
@@ -504,7 +504,7 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, onGoBack, session }) =>
       };
       
       const rzp = new (window as any).Razorpay(options);
-      rzp.on('payment.failed', function (response: any) {
+      rzp.on('payment.failed', function () {
         alert('Payment failed. Please try again.');
       });
       rzp.open();
@@ -567,12 +567,6 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, onGoBack, session }) =>
   // We need to capture cart data before clearing it for the receipt
   const [receiptCart, setReceiptCart] = useState<CartItem[]>([]);
   const [receiptTotal, setReceiptTotal] = useState(0);
-
-  const handleFinalSubmit = () => {
-    setReceiptCart([...cart]);
-    setReceiptTotal(displayTotal);
-    setIsSubmitted(true);
-  };
 
   if (isSubmitted) {
     const isPaid = paymentMethod === 'razorpay';

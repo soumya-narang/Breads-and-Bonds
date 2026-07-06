@@ -8,7 +8,7 @@ interface Props {
   onGoBack: () => void;
 }
 
-export const OurStory: React.FC<Props> = ({ onNavigate, onGoBack }) => {
+export const OurStory: React.FC<Props> = ({ onGoBack }) => {
   return (
     <div className="page-shell page-transition">
       <div className="page-header">

@@ -133,7 +133,7 @@ const SectionItem: React.FC<{ section: PolicySection; index: number }> = ({ sect
   );
 };
 
-export const Policies: React.FC<Props> = ({ onNavigate, onGoBack }) => {
+export const Policies: React.FC<Props> = ({ onGoBack }) => {
   return (
     <div className="page-shell page-transition">
       <div className="page-header">
