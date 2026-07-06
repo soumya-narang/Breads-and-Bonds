@@ -13,6 +13,7 @@
   z-index: 100;
   transition: background-color 0.4s ease, border-color 0.4s ease, backdrop-filter 0.4s ease;
   border-bottom: 1px solid transparent;
+  pointer-events: none; /* Let clicks pass through transparent background */
 }
 
 .global-header.transparent {
@@ -26,6 +27,7 @@
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(44, 30, 22, 0.05);
+  pointer-events: auto; /* Catch clicks on blurred background */
 }
 
 .header-container {
@@ -33,6 +35,10 @@
   align-items: center;
   justify-content: space-between;
   height: 80px;
+}
+
+.header-container > * {
+  pointer-events: auto; /* Keep header children clickable */
 }
 
 .header-logo {

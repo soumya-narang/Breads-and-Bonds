@@ -12,6 +12,7 @@ export type Page = 'home' | 'order' | 'story' | 'policies' | 'auth';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
+  const [history, setHistory] = useState<Page[]>([]);
   const [session, setSession] = useState<Session | null>(null);
 
   React.useEffect(() => {
@@ -28,27 +29,43 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  const handleNavigate = (page: Page) => {
+    setHistory(prev => [...prev, currentPage]);
+    setCurrentPage(page);
+  };
+
+  const handleGoBack = () => {
+    if (history.length > 0) {
+      const newHistory = [...history];
+      const prevPage = newHistory.pop()!;
+      setHistory(newHistory);
+      setCurrentPage(prevPage);
+    } else {
+      setCurrentPage('home');
+    }
+  };
+
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
-        return <Home onNavigate={setCurrentPage} />;
+        return <Home onNavigate={handleNavigate} />;
       case 'order':
-        return <OrderFlow onNavigate={setCurrentPage} session={session} />;
+        return <OrderFlow onNavigate={handleNavigate} onGoBack={handleGoBack} session={session} />;
       case 'story':
-        return <OurStory onNavigate={setCurrentPage} />;
+        return <OurStory onNavigate={handleNavigate} onGoBack={handleGoBack} />;
       case 'policies':
-        return <Policies onNavigate={setCurrentPage} />;
+        return <Policies onNavigate={handleNavigate} onGoBack={handleGoBack} />;
       case 'auth':
-        return <Auth onNavigate={setCurrentPage} session={session} />;
+        return <Auth onNavigate={handleNavigate} session={session} />;
       default:
-        return <Home onNavigate={setCurrentPage} session={session} />;
+        return <Home onNavigate={handleNavigate} />;
     }
   };
 
   return (
     <Layout 
       currentPage={currentPage} 
-      onNavigate={setCurrentPage} 
+      onNavigate={handleNavigate} 
       session={session}
     >
       {renderPage()}

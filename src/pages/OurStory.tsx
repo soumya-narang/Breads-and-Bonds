@@ -5,15 +5,16 @@ import './Pages.css';
 
 interface Props {
   onNavigate: (page: Page) => void;
+  onGoBack: () => void;
 }
 
-export const OurStory: React.FC<Props> = ({ onNavigate }) => {
+export const OurStory: React.FC<Props> = ({ onNavigate, onGoBack }) => {
   return (
     <div className="page-shell page-transition">
       <div className="page-header">
-        <button className="back-link" onClick={() => onNavigate('home')}>
+        <button className="back-link" onClick={onGoBack}>
           <ArrowLeft size={18} />
-          <span>Back to Menu</span>
+          <span>Back</span>
         </button>
       </div>
 

@@ -1,7 +1,7 @@
 /* ===== SHARED PAGE STYLES (Warm Modernism) ===== */
 .page-shell {
   min-height: calc(100vh - 80px);
-  padding: var(--space-3xl) 0;
+  padding: var(--space-xl) 0 var(--space-4xl);
   background: var(--color-surface);
 }
 
@@ -137,6 +137,43 @@
   color: var(--color-text-muted);
   line-height: 1.7;
   font-size: 1.05rem;
+}
+
+.faq-answer p {
+  margin-bottom: var(--space-md);
+}
+
+.faq-answer p:last-child {
+  margin-bottom: 0;
+}
+
+.faq-answer ul {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-md) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.faq-answer ul li {
+  position: relative;
+  padding-left: 20px;
+  line-height: 1.7;
+}
+
+.faq-answer ul li::before {
+  content: '•';
+  position: absolute;
+  left: 4px;
+  top: 0;
+  color: var(--color-accent);
+  font-weight: 700;
+  font-size: 1.1em;
+}
+
+.faq-answer ul li strong {
+  color: var(--color-text-main);
 }
 
 /* ===== CONTACT ===== */
