@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Page } from '../App';
 import type { Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
 import { motion, useScroll, useSpring, useMotionValue } from 'framer-motion';
 import { ShoppingBag, BookOpen, ScrollText } from 'lucide-react';
 import './Layout.css';
@@ -138,10 +137,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
     };
   }, [isFinePointer, cursorVisible, mouseX, mouseY]);
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    onNavigate('home');
-  };
+
 
   return (
     <div className="layout-root">
