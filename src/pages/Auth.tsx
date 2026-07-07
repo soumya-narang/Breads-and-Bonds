@@ -67,21 +67,21 @@ export const Auth: React.FC<AuthProps> = ({ onNavigate, session }) => {
       
       if (error) throw error;
 
-      // If this was a Sign Up, we now have a session and a user ID, so we create the profile!
+      // If this was a Sign Up, we now have a session and a user ID, so we upsert the profile!
+      // Upsert ensures that if they accidentally used "Sign Up" instead of "Sign In" again,
+      // it just updates their delivery address/phone instead of throwing a unique constraint error.
       if (!isLogin && data.user) {
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert({
+          .upsert({
             id: data.user.id,
             full_name: fullName,
             phone_number: phoneNumber,
             delivery_address: deliveryAddress
-          });
+          }, { onConflict: 'id' });
           
         if (profileError) {
           console.error("Profile creation error:", profileError);
-          // We don't throw here because they are technically logged in now,
-          // but you might want to handle this gracefully if RLS fails.
         }
       }
 

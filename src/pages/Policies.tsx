@@ -158,11 +158,11 @@ export const Policies: React.FC<Props> = ({ onGoBack }) => {
           <h3 className="text-serif contact-heading">Get in Touch</h3>
           <p className="contact-subtitle">We'd love to hear from you. Reach out anytime.</p>
           <div className="contact-actions">
-            <a href="https://wa.me/" target="_blank" rel="noopener noreferrer" className="btn-primary flex-center gap-sm">
+            <a href="https://wa.me/916267014909?text=Hi%20there!%20I%20have%20a%20question." target="_blank" rel="noopener noreferrer" className="btn-primary flex-center gap-sm">
               <MessageCircle size={18} />
               WhatsApp Us
             </a>
-            <a href="https://instagram.com/" target="_blank" rel="noopener noreferrer" className="btn-secondary flex-center gap-sm">
+            <a href="https://instagram.com/breadsandbonds" target="_blank" rel="noopener noreferrer" className="btn-secondary flex-center gap-sm">
               Instagram
             </a>
           </div>

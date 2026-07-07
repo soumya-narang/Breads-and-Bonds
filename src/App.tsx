@@ -4,11 +4,12 @@ import { OrderFlow } from './pages/OrderFlow';
 import { OurStory } from './pages/OurStory';
 import { Policies } from './pages/Policies';
 import { Auth } from './pages/Auth';
+import { Account } from './pages/Account';
 import { Layout } from './components/Layout';
 import { supabase } from './lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 
-export type Page = 'home' | 'order' | 'story' | 'policies' | 'auth';
+export type Page = 'home' | 'order' | 'story' | 'policies' | 'auth' | 'account';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
@@ -57,6 +58,8 @@ function App() {
         return <Policies onNavigate={handleNavigate} onGoBack={handleGoBack} />;
       case 'auth':
         return <Auth onNavigate={handleNavigate} session={session} />;
+      case 'account':
+        return <Account onNavigate={handleNavigate} session={session} />;
       default:
         return <Home onNavigate={handleNavigate} />;
     }

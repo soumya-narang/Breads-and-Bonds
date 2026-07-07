@@ -461,14 +461,35 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, onGoBack, session }) =>
       setErrors({});
 
       if (paymentMethod === 'cod') {
-        // COD: skip payment, go straight to receipt
-        setReceiptCart([...cart]);
-        setReceiptTotal(displayTotal);
-        setIsSubmitted(true);
+        // Save order to Supabase
+        saveOrderToDatabase().then(() => {
+          // COD: skip payment, go straight to receipt
+          setReceiptCart([...cart]);
+          setReceiptTotal(displayTotal);
+          setIsSubmitted(true);
+        });
       } else {
         // Online payment via Razorpay
         initiateRazorpayPayment();
       }
+    }
+  };
+
+  const saveOrderToDatabase = async () => {
+    if (!session?.user?.id) return;
+    try {
+      const { error } = await supabase.from('orders').insert({
+        user_id: session.user.id,
+        items: cart,
+        total_amount: displayTotal,
+        delivery_method: deliveryMethod,
+        payment_method: paymentMethod,
+        status: 'Pending',
+        checkout_details: checkoutDetails
+      });
+      if (error) console.error("Error saving order to database:", error);
+    } catch (err) {
+      console.error("Exception saving order to database:", err);
     }
   };
 
@@ -490,9 +511,11 @@ export const OrderFlow: React.FC<Props> = ({ onNavigate, onGoBack, session }) =>
         order_id: data.id,
         handler: function () {
           // Success Callback
-          setReceiptCart([...cart]);
-          setReceiptTotal(displayTotal);
-          setIsSubmitted(true);
+          saveOrderToDatabase().then(() => {
+            setReceiptCart([...cart]);
+            setReceiptTotal(displayTotal);
+            setIsSubmitted(true);
+          });
         },
         prefill: {
           name: checkoutDetails.fullName,

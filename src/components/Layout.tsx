@@ -3,6 +3,7 @@ import type { Page } from '../App';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { motion, useScroll, useSpring, useMotionValue } from 'framer-motion';
+import { ShoppingBag, BookOpen, ScrollText } from 'lucide-react';
 import './Layout.css';
 
 interface LayoutProps {
@@ -217,8 +218,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
             <div className="nav-divider" />
             
             {session ? (
-              <NavLink className="auth-link" isActive={false} onClick={handleSignOut}>
-                Log Out
+              <NavLink className="auth-link" isActive={currentPage === 'account'} onClick={() => onNavigate('account')}>
+                My Account
               </NavLink>
             ) : (
               <NavLink className="auth-link" isActive={currentPage === 'auth'} onClick={() => onNavigate('auth')}>
@@ -232,6 +233,31 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
       <main className="main-content">
         {children}
       </main>
+
+      {/* Mobile Bottom Navigation - visible only on ≤768px */}
+      <nav className="mobile-bottom-nav font-sans">
+        <button
+          className={`mobile-nav-item ${currentPage === 'order' ? 'active' : ''}`}
+          onClick={() => onNavigate('order')}
+        >
+          <ShoppingBag size={20} strokeWidth={1.8} />
+          <span>Order</span>
+        </button>
+        <button
+          className={`mobile-nav-item ${currentPage === 'story' ? 'active' : ''}`}
+          onClick={() => onNavigate('story')}
+        >
+          <BookOpen size={20} strokeWidth={1.8} />
+          <span>Our Story</span>
+        </button>
+        <button
+          className={`mobile-nav-item ${currentPage === 'policies' ? 'active' : ''}`}
+          onClick={() => onNavigate('policies')}
+        >
+          <ScrollText size={20} strokeWidth={1.8} />
+          <span>Policies</span>
+        </button>
+      </nav>
 
       <footer className="global-footer font-sans">
         <div className="container footer-container">
